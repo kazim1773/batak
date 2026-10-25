@@ -1,0 +1,3 @@
+# Netlify ayarları: GitHub'a her gönderimde sadece "oyun" klasörü yayınlanır (derleme adımı yok)
+[build]
+  publish = "oyun"
