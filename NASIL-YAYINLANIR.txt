@@ -1,0 +1,12 @@
+EŞLİ BATAK — NOTLAR
+
+Bilgisayarda oynamak:
+  oyun\index.html dosyasına çift tıkla.
+
+İnternette yayınlamak / güncellemek (Netlify):
+  1. app.netlify.com adresine gir ve hesabına giriş yap.
+  2. İlk kez: "Add new project" > "Deploy manually" > "oyun" klasörünü sürükleyip bırak.
+     Güncellemek için: projeni aç > "Deploys" > "oyun" klasörünü sayfanın altındaki kutuya sürükle.
+  3. Link aynı kalır, arkadaşların yeni sürümü otomatik görür.
+
+ÖNEMLİ: Netlify'a sadece "oyun" klasörünü sürükle (Batak klasörünün tamamını değil).

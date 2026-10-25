@@ -1,0 +1,2497 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Eşli Batak — Deneme</title>
+<!-- DENEME SÜRÜMÜ: resimler ve simgeler asıl "oyun" klasöründen gelir -->
+<base href="/">
+<!-- Telefonda "Ana ekrana ekle" ile uygulama gibi açılması için -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#123a27">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Batak">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #0d2a1c;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+  }
+  #app {
+    position: relative;
+    max-width: 460px; height: 100dvh; margin: 0 auto;
+    display: flex; flex-direction: column;
+    /* masanın dışı: koyu, noktalı zemin */
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='11' cy='11' r='1.3' fill='rgba(255,255,255,0.07)'/%3E%3C/svg%3E"),
+      linear-gradient(#123a27, #0b2619);
+    overflow: hidden;
+  }
+  /* Masa (çuha) renkleri: ayarlardan seçilir */
+  #app { --felt1: #23874f; --felt2: #1b6b40; --felt3: #134d2e; }
+  #app[data-felt="navy"] { --felt1: #2f5d9e; --felt2: #21457a; --felt3: #152c52; }
+  #app[data-felt="red"]  { --felt1: #9a3344; --felt2: #77232f; --felt3: #4f141e; }
+  /* Pencerelerin rengi: masadan farklı, üstünde güzel duran bir renk */
+  #app                   { --sheet: #2b1d14; }   /* yeşil masa → ceviz kahvesi */
+  #app[data-felt="navy"] { --sheet: #1f2128; }   /* lacivert masa → antrasit */
+  #app[data-felt="red"]  { --sheet: #16203a; }   /* bordo masa → gece mavisi */
+  .sw-green { background: linear-gradient(#23874f, #134d2e) !important; }
+  .sw-navy  { background: linear-gradient(#2f5d9e, #152c52) !important; }
+  .sw-red   { background: linear-gradient(#9a3344, #4f141e) !important; }
+
+  /* Oval masa: ahşap kenar, altın şerit, baklava desenli çuha */
+  #table::before {
+    content: ""; position: absolute; inset: 6px 6px 2px; z-index: 0; pointer-events: none;
+    border-radius: 46% / 34%;
+    border: 8px solid #6b3f1d;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(255,255,255,.13), rgba(255,255,255,0) 62%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M13 2 L24 13 L13 24 L2 13 Z' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='1'/%3E%3Ccircle cx='13' cy='13' r='1.4' fill='rgba(255,255,255,0.06)'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse at 50% 50%, var(--felt1) 0%, var(--felt2) 60%, var(--felt3) 100%);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 214, 102, .55),
+      inset 0 0 0 7px rgba(0,0,0,.12),
+      inset 0 0 45px rgba(0,0,0,.45),
+      0 0 0 2px #3e230e,
+      0 6px 18px rgba(0,0,0,.55);
+  }
+  /* Masanın ortasında silik kart simgeleri */
+  #table::after {
+    content: "♠ ♥ ♣ ♦"; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+    z-index: 0; pointer-events: none; white-space: nowrap;
+    font-size: 30px; letter-spacing: 6px; color: rgba(255,255,255,.07);
+  }
+
+  /* Skor çubuğu */
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    padding-top: calc(8px + env(safe-area-inset-top));   /* iPhone çentiği */
+    background: rgba(0,0,0,.28);
+    font-size: 12px;
+  }
+  .team { display: flex; flex-direction: column; align-items: center; line-height: 1.15; min-width: 44px; max-width: 96px; }
+  .team span { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 96px; opacity: .9; }
+  .team b { font-size: 20px; }
+  .team[hidden] { display: none; }
+  /* Tekli oyunda üstte dört oyuncunun puanı */
+  #soloScores { display: flex; gap: 6px; }
+  #soloScores[hidden] { display: none; }
+  .pscore {
+    display: flex; flex-direction: column; align-items: center; min-width: 38px; line-height: 1.1;
+    padding: 2px 4px; border-radius: 10px; background: rgba(255,255,255,.08);
+  }
+  .pscore.me { background: rgba(255,213,74,.2); }
+  .pscore span { font-size: 15px; }
+  .pscore b { font-size: 15px; }
+  .target { flex: 1; text-align: center; opacity: .8; }
+
+  /* Masa */
+  #table { position: relative; flex: 1; }
+  .seat { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .north { top: 10px; left: 50%; transform: translateX(-50%); }
+  .west  { left: 8px;  top: 45%; transform: translateY(-50%); }
+  .east  { right: 8px; top: 45%; transform: translateY(-50%); }
+  .name {
+    font-size: 12px; background: rgba(0,0,0,.35);
+    padding: 3px 9px; border-radius: 10px; white-space: nowrap;
+  }
+  .name.dealer::after { content: " · Dağıtan"; color: #ffd54a; font-weight: 600; }
+  .backs { position: relative; }
+  .sback {
+    position: absolute; width: 26px; height: 38px; border-radius: 4px;
+  }
+  #msg {
+    position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+    font-size: 14px; text-align: center; opacity: .9;
+    background: rgba(0,0,0,.3); padding: 8px 14px; border-radius: 12px;
+    pointer-events: none; transition: opacity .3s;
+  }
+  #msg:empty { opacity: 0; }
+  #deck { position: absolute; width: 30px; height: 44px; display: none; }
+  #deck .sback { width: 30px; height: 44px; }
+  .seat[hidden] { display: none; }
+  /* Gömmeli: ortadaki dip (4 kapalı kart) */
+  #dip { position: absolute; left: 50%; top: 18%; width: 62px; height: 38px; transform: translateX(-50%); z-index: 5; }
+  #dip[hidden] { display: none; }
+  #dip::after {
+    content: "DİP"; position: absolute; top: 42px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; opacity: .7;
+  }
+  /* Gömmeli: gömülecek kart seçimi */
+  #hand .card.bury { transform: translateY(-14px); box-shadow: 0 0 0 3px #ff8a80, 0 4px 10px rgba(0,0,0,.5); }
+  /* Dipten yeni gelen kartlar kısa süre parlar */
+  #hand .card.newdip { box-shadow: 0 0 0 3px #69f0ae, 0 0 14px rgba(105,240,174,.8); animation: dipIn .6s ease-out; }
+  @keyframes dipIn { from { transform: translateY(-20px); opacity: 0; } }
+
+  /* Sıra kimdeyse ismi sarı yanar */
+  .name.turn { background: #ffd54a; color: #222; font-weight: 700; }
+  .name.turn.dealer::after { color: #7a5c00; }
+  .name .tag { color: #9be7b4; font-weight: 600; }
+
+  /* İhale baloncukları */
+  .bubble {
+    position: absolute; z-index: 20;
+    background: #fff; color: #222; font-weight: 800; font-size: 14px;
+    padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    animation: pop .2s ease-out;
+  }
+  .bubble.pass { background: #cfd8dc; color: #555; font-weight: 600; }
+  .bubble:empty { display: none; }
+  @keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .north .bubble { left: calc(100% + 6px); top: 0; }
+  .west .bubble  { left: calc(100% + 6px); top: 0; }
+  .east .bubble  { right: calc(100% + 6px); top: 0; }
+  #me .bubble    { left: 50%; top: -34px; transform: translateX(-50%); }
+
+  /* İhale / koz seçim paneli */
+  #panel {
+    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 30;
+    width: min(330px, calc(100% - 24px));
+    background: var(--sheet); border: 1px solid rgba(255,214,102,.35);
+    border-radius: 16px; padding: 12px; text-align: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  }
+  #panel[hidden] { display: none; }
+  #panel .title { font-size: 14px; margin-bottom: 10px; opacity: .9; }
+  #panel .opts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  #panel .opt {
+    min-width: 44px; padding: 10px 0; flex: 0 0 44px;
+    background: #fff; color: #222; border: 0; border-radius: 10px;
+    font-size: 17px; font-weight: 800; cursor: pointer;
+  }
+  #panel .opt.pass { flex: 1 0 100%; background: #cfd8dc; font-size: 15px; }
+  #panel #buryBtn { background: #ffd54a; }
+  #panel .opt:disabled { opacity: .4; cursor: default; }
+  #panel .opt.suit { flex: 0 0 64px; font-size: 24px; padding: 8px 0 6px; line-height: 1; }
+  #panel .opt.suit small { display: block; font-size: 11px; color: #666; font-weight: 600; margin-top: 3px; }
+  #panel .opt.red { color: #c62828; }
+
+  /* Açılan el (küçük açık kartlar) */
+  .backs.open .card { --cw: 36px; --ch: 51px; border-radius: 4px; }
+  .north .backs.open .card { --cw: 40px; --ch: 57px; }
+  .backs.open .card .cr { flex-direction: row; gap: 1px; top: 1px; left: 2px; }
+  .backs.open .card .cr .r { font-size: 13px; letter-spacing: -1px; }
+  .backs.open .card .cr .s { font-size: 12px; }
+  .backs.open .card.face .cr { top: 0; left: 0; padding: 1px 2px 2px; min-width: 0; }
+  .backs.open .card .cc { font-size: 18px; }
+
+  /* Koz çubuğu: sadece sen koza girdiğinde, sağ kenarda ince şerit */
+  #kozbar {
+    position: absolute; right: 3px; top: 45%; transform: translateY(-50%); z-index: 15;
+    width: 24px; padding: 4px 0;
+    background: rgba(0,0,0,.4); border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center;
+    font-size: 11px; font-weight: 700; line-height: 15px;
+  }
+  #kozbar[hidden] { display: none; }
+  #kozbar .ks { font-size: 15px; line-height: 18px; margin-bottom: 2px; }
+  #kozbar .ks.red, #kozbar .out.red { color: #ff8a80; }
+  #kozbar .mine   { opacity: .3; }
+  #kozbar .played { opacity: .3; text-decoration: line-through; }
+  #kozbar .out    { color: #fff; }
+  #table.koz .east { right: 32px; }
+
+  /* Ortadaki el (yere atılan kartlar) */
+  #trick { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+  #trick .card { --cw: 50px; --ch: 71px; }
+  #trick .card.win { box-shadow: 0 0 0 3px #ffd54a, 0 2px 8px rgba(0,0,0,.5); }
+
+  /* Oynanabilir / oynanamaz kartlar */
+  .card.playable { cursor: pointer; }
+  #hand .card.playable:hover { transform: translateY(-6px); }
+  .card.dim { filter: brightness(.55); }
+  .backs.open .card.playable { transform: translateY(4px); box-shadow: 0 0 0 2px #ffd54a; cursor: pointer; }
+  .shake { animation: shake .3s; }
+  @keyframes shake { 25% { margin-left: -4px; } 75% { margin-left: 4px; } }
+
+  /* Yazboz */
+  #yzBtn { background: rgba(255,255,255,.12); border: 0; color: #fff; border-radius: 14px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  #yz {
+    position: absolute; inset: 0; z-index: 90;
+    background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #yz[hidden] { display: none; }
+  .paper {
+    width: 100%; max-width: 340px; max-height: 85%; overflow: auto;
+    color: #23324a; border-radius: 6px; padding: 14px 14px 14px 18px;
+    background: #fdf8e7 repeating-linear-gradient(#fdf8e7 0 29px, #c9dcef 29px 30px);
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  }
+  .paper h2 { margin: 0 0 6px; text-align: center; font-size: 22px; color: #b71c1c; }
+  .paper table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .paper th { border-bottom: 2px solid #c62828; padding: 4px 2px; font-size: 15px; }
+  .paper th.us, .paper th.them { font-size: 13px; line-height: 1.25; vertical-align: bottom; }
+  .paper td { padding: 4px 2px; text-align: center; height: 30px; }
+  .paper td.no { color: #888; width: 26px; }
+  .paper td.ih { font-size: 12px; text-align: left; white-space: nowrap; }
+  .paper .us, .paper .them { width: 74px; }
+  .paper .us { border-left: 2px solid #c62828; }
+  .paper .them { border-left: 1px solid #c62828; }
+  /* Tekli yazboz: dört oyuncu sütunu */
+  .paper .pc { width: 50px; border-left: 1px solid #c62828; }
+  .paper th.pc { font-size: 11px; line-height: 1.2; vertical-align: bottom; word-break: break-word; }
+  .paper table.solo td.ih { font-size: 11px; white-space: normal; }
+  .paper table.solo td b { font-size: 14px; }
+  .paper table.solo td small { display: block; margin: 0; }
+  .paper td b { font-size: 16px; }
+  .paper td small { font-size: 11px; color: #777; margin-left: 2px; }
+  .paper td small.neg, .paper td b.neg { color: #c62828; }
+  .paper .red { color: #c62828; }
+  .paper tfoot td { border-top: 2px solid #c62828; font-weight: 700; font-size: 17px; }
+  .paper .empty { text-align: center; color: #888; padding: 16px 0; }
+  .paper .result { text-align: center; margin: 10px 0 4px; font-size: 16px; font-weight: 700; color: #1b5e20; }
+  .paper .result:empty { display: none; }
+  .paper .close { display: block; margin: 10px auto 0; }
+  .bump { animation: bump .6s ease-out; }
+  @keyframes bump { 30% { transform: scale(1.4); color: #ffd54a; } }
+
+  /* Skor çubuğundaki ihale bilgisi */
+  #contract { display: block; font-size: 13px; font-weight: 700; color: #ffd54a; opacity: 1; margin-top: 2px; }
+  #contract:empty { display: none; }
+  #contract { font-size: 12px; white-space: nowrap; }
+
+  /* Oyuncunun önünde: bu elde aldığı el sayısı */
+  .won {
+    position: absolute; z-index: 11;
+    min-width: 26px; padding: 3px 7px; border-radius: 12px;
+    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.25);
+    font-size: 12px; font-weight: 700; text-align: center; white-space: nowrap;
+  }
+  .won:empty { display: none; }
+  .won.bump { animation: bump .6s ease-out; }
+  .north .won { top: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+  .west .won  { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+  .east .won  { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+  #me .won    { right: calc(50% + 40px); top: 6px; }
+  #contract .red { color: #ff8a80; }
+
+  /* Benim elim */
+  #me { padding: 6px 0 calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  #hand { position: relative; width: 100%; }
+
+  .card {
+    position: absolute; top: 0;
+    width: var(--cw); height: var(--ch);
+    border-radius: 6px; background: #fff; color: #111;
+    border: 1px solid #bbb;
+    box-shadow: 0 1px 3px rgba(0,0,0,.45);
+  }
+  .card.red { color: #c62828; }
+  .card .cr {
+    position: absolute; top: 3px; left: 3px;
+    display: flex; flex-direction: column; align-items: center;
+    line-height: 1; font-weight: 700;
+  }
+  .card .cr .r { font-size: calc(var(--cw) * .34); letter-spacing: -1px; }
+  .card .cr .s { font-size: calc(var(--cw) * .30); }
+  .card .cc { position: absolute; bottom: 3px; right: 5px; font-size: calc(var(--cw) * .52); line-height: 1; }
+  /* Resimli kartlar (K, Q, J) */
+  .card .fig { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 5px; }
+  .card.face .cr {
+    z-index: 1; background: #fff; top: 0; left: 0;
+    border-radius: 5px 0 5px 0; padding: 3px 3px 4px;
+    min-width: calc(var(--cw) * .42);
+  }
+  .back {
+    background: repeating-linear-gradient(45deg, #b71c1c 0 4px, #8e1414 4px 8px);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.45);
+  }
+  .flip { animation: flip .32s ease-out both; }
+  @keyframes flip {
+    from { transform: rotateY(90deg); }
+    to   { transform: rotateY(0); }
+  }
+  .flyer { position: absolute; width: 26px; height: 38px; border-radius: 4px; z-index: 50; pointer-events: none; }
+
+  .btn {
+    background: #ffd54a; color: #222; border: 0; border-radius: 22px;
+    padding: 10px 22px; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .btn:disabled { opacity: .4; cursor: default; }
+
+  /* ---- Ana menü ---- */
+  #menu {
+    position: absolute; inset: 0; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.14), rgba(255,255,255,0) 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M13 2 L24 13 L13 24 L2 13 Z' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='1'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse at 50% 40%, var(--felt1), var(--felt2) 60%, var(--felt3));
+  }
+  #menu[hidden] { display: none; }
+  .fan { position: relative; width: 200px; height: 120px; margin-bottom: 4px; }
+  .fan .card { --cw: 64px; --ch: 91px; left: 68px; top: 10px; transform-origin: 50% 120%; }
+  .fan .card:nth-child(1) { transform: rotate(-24deg); }
+  .fan .card:nth-child(2) { transform: rotate(-8deg); }
+  .fan .card:nth-child(3) { transform: rotate(8deg); }
+  .fan .card:nth-child(4) { transform: rotate(24deg); }
+  #menu h1 {
+    margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 46px; letter-spacing: 2px;
+    color: #ffe08a; text-shadow: 0 2px 0 #7a5c00, 0 6px 18px rgba(0,0,0,.5);
+  }
+  #menu .sub { margin: -6px 0 10px; opacity: .8; font-size: 14px; }
+  .modes { display: flex; flex-direction: column; gap: 10px; width: min(340px, 100%); }
+  .mode {
+    position: relative; display: grid; grid-template-columns: 46px 1fr; align-items: center; column-gap: 12px;
+    text-align: left; padding: 12px 14px; border-radius: 16px; cursor: pointer;
+    background: rgba(0,0,0,.32); color: #fff; border: 1px solid rgba(255,214,102,.45);
+    box-shadow: 0 4px 14px rgba(0,0,0,.3); transition: transform .15s, background .15s;
+  }
+  .mode:not(:disabled):hover, .mode:not(:disabled):active { transform: translateY(-2px); background: rgba(0,0,0,.45); }
+  .mode .mi {
+    grid-row: span 2; width: 46px; height: 46px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    background: linear-gradient(#ffe08a, #e0a800); color: #3a2a00;
+  }
+  .mode b { font-size: 17px; }
+  .mode small { font-size: 12px; opacity: .75; }
+  .mode:disabled { opacity: .55; cursor: default; border-color: rgba(255,255,255,.2); }
+  .mode:disabled .mi { background: rgba(255,255,255,.2); color: #fff; }
+  .mode em {
+    position: absolute; top: 10px; right: 12px; font-style: normal; font-size: 11px; font-weight: 700;
+    background: rgba(255,255,255,.18); padding: 2px 8px; border-radius: 10px;
+  }
+  .menu-link {
+    background: none; border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 20px;
+    padding: 9px 20px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px;
+  }
+  .menu-link.danger { border-color: rgba(255,138,128,.6); color: #ffb4ab; }
+
+  /* ---- Ayarlar ---- */
+  #settings {
+    position: absolute; inset: 0; z-index: 110;
+    background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #settings[hidden] { display: none; }
+  #profileSheet {
+    position: absolute; inset: 0; z-index: 110;
+    background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #profileSheet[hidden] { display: none; }
+  #preGame {
+    position: absolute; inset: 0; z-index: 110;
+    background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #preGame[hidden] { display: none; }
+  /* Oyunun kendi onay penceresi (tarayıcının "confirm" penceresi bazı yerlerde açılmıyor) */
+  #askBox {
+    position: absolute; inset: 0; z-index: 130;
+    background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #askBox[hidden] { display: none; }
+  #askBox p { margin: 0; text-align: center; font-size: 15px; line-height: 1.45; }
+  #askBox .ask-btns { display: flex; gap: 10px; justify-content: center; }
+  #askBox .ask-btns .btn, #askBox .ask-btns .menu-link { min-width: 110px; margin: 0; }
+  #profileSheet .welcome { margin: -6px 0 0; text-align: center; font-size: 13px; opacity: .8; }
+  #profileSheet .welcome[hidden] { display: none; }
+  .sheet {
+    width: min(340px, 100%); background: var(--sheet); border: 1px solid rgba(255,214,102,.45);
+    border-radius: 18px; padding: 18px 16px 14px; box-shadow: 0 12px 30px rgba(0,0,0,.5);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .sheet h2 { margin: 0; text-align: center; font-family: Georgia, serif; color: #ffe08a; font-size: 24px; }
+  .set-row { display: flex; flex-direction: column; gap: 6px; }
+  .set-row > span { font-size: 13px; opacity: .8; }
+  .seg { display: flex; background: rgba(0,0,0,.35); border-radius: 12px; padding: 3px; gap: 3px; }
+  .seg button {
+    flex: 1; border: 0; border-radius: 9px; padding: 8px 4px; font-size: 14px; font-weight: 600;
+    background: none; color: #fff; cursor: pointer;
+  }
+  .seg button.on { background: #ffd54a; color: #222; }
+  .seg.swatches button { height: 36px; border: 2px solid transparent; }
+  .seg.swatches button.on { border-color: #ffd54a; background-clip: padding-box; }
+  .sheet .btn { align-self: center; min-width: 140px; }
+  .sheet .menu-link { align-self: center; margin-top: 0; }
+  #gearBtn { background: none; border: 0; font-size: 20px; color: #fff; cursor: pointer; padding: 4px; }
+
+  /* ===== DENEME: animasyonlu açılış ===== */
+  #menuBg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }
+  #menuBg span {
+    position: absolute; bottom: -60px; color: rgba(255,255,255,.07); line-height: 1;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(0) rotate(0deg); }
+    to   { transform: translateY(-120vh) rotate(360deg); }
+  }
+  #menu { isolation: isolate; }
+  #menu.play .fan .card { animation: fanOut .8s cubic-bezier(.2,.8,.2,1) backwards; }
+  #menu.play .fan .card:nth-child(1) { animation-delay: .05s; }
+  #menu.play .fan .card:nth-child(2) { animation-delay: .15s; }
+  #menu.play .fan .card:nth-child(3) { animation-delay: .25s; }
+  #menu.play .fan .card:nth-child(4) { animation-delay: .35s; }
+  .fan .card:nth-child(1) { --r: -24deg; }
+  .fan .card:nth-child(2) { --r: -8deg; }
+  .fan .card:nth-child(3) { --r: 8deg; }
+  .fan .card:nth-child(4) { --r: 24deg; }
+  @keyframes fanOut {
+    0%   { transform: translateY(40px) rotate(0deg) scale(.8); opacity: 0; }
+    35%  { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: rotate(var(--r)); }
+  }
+  /* parlayan BATAK yazısı */
+  #menu h1 {
+    color: transparent; text-shadow: none;
+    background: linear-gradient(110deg, #e0a800 0%, #ffe08a 35%, #fffbe8 50%, #ffe08a 65%, #e0a800 100%);
+    background-size: 250% 100%; -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 2px 0 #7a5c00) drop-shadow(0 6px 14px rgba(0,0,0,.5));
+    animation: shimmer 4s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+  /* menü öğeleri sırayla gelir */
+  #menu.play h1, #menu.play .sub, #menu.play .mode, #menu.play .menu-link, #menu.play .profile {
+    animation-name: rise; animation-duration: .5s; animation-fill-mode: backwards; animation-timing-function: ease-out;
+  }
+  #menu.play h1 { animation-name: rise, shimmer; animation-duration: .5s, 4s; animation-iteration-count: 1, infinite; animation-delay: .4s, 1s; animation-fill-mode: backwards, none; }
+  #menu.play .sub { animation-delay: .5s; }
+  #menu.play .mode:nth-child(1) { animation-delay: .6s; }
+  #menu.play .mode:nth-child(2) { animation-delay: .7s; }
+  #menu.play .mode:nth-child(3) { animation-delay: .8s; }
+  #menu.play .mode:nth-child(4) { animation-delay: .9s; }
+  #menu.play .menu-link { animation-delay: 1s; }
+  #menu.play .profile { animation-delay: .2s; }
+  @keyframes rise { from { opacity: 0; translate: 0 16px; } }
+  /* Telefonda "hareketi azalt" açıksa animasyon yok */
+  @media (prefers-reduced-motion: reduce) {
+    #menu *, #menu.play * { animation: none !important; }
+  }
+  .mode:not(:disabled):active { scale: .97; }
+  .mode.cont { border-color: #ffd54a; background: rgba(255, 213, 74, .14); }
+  .mode.cont .mi { font-size: 18px; }
+  .mode[hidden] { display: none; }
+
+  /* ===== DENEME: profil ve avatarlar ===== */
+  .profile {
+    position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 14px;
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.2); border-radius: 24px;
+    padding: 4px 12px 4px 4px; color: #fff; font-size: 14px; font-weight: 600;
+  }
+  .profile .big-av {
+    width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; background: linear-gradient(#ffe08a, #e0a800);
+  }
+  .profile small { display: block; font-size: 10px; font-weight: 400; opacity: .7; }
+  .av {
+    display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+    width: 20px; height: 20px; margin: -2px 5px 0 -5px; border-radius: 50%;
+    background: rgba(255,255,255,.2); font-size: 13px; line-height: 1;
+  }
+  .name.turn .av { background: rgba(0,0,0,.15); }
+  #profileSheet .avatars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  #profileSheet .avatars button {
+    aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent; font-size: 26px; cursor: pointer;
+    background: rgba(255,255,255,.1);
+  }
+  #profileSheet .avatars button.on { border-color: #ffd54a; background: rgba(255,213,74,.2); }
+  #profileSheet input {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.3);
+    background: rgba(0,0,0,.3); color: #fff; font-size: 16px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="team"><span id="team0">Sen · Eşin</span><b id="score0">0</b></div>
+    <div class="team"><span id="team1">Sağ · Sol</span><b id="score1">0</b></div>
+    <div id="soloScores" hidden></div>
+    <div class="target"><span id="targetTxt">Hedef: 51</span><span id="contract"></span></div>
+    <button id="yzBtn" title="Yazboz">📋</button>
+    <button id="gearBtn" title="Ayarlar">⚙️</button>
+  </header>
+
+  <div id="table">
+    <div class="seat north" id="seat2"><div class="name">Eşin</div><div class="backs"></div><div class="bubble"></div><div class="won"></div></div>
+    <div class="seat west"  id="seat3"><div class="name">Sol</div><div class="backs"></div><div class="bubble"></div><div class="won"></div></div>
+    <div class="seat east"  id="seat1"><div class="name">Sağ</div><div class="backs"></div><div class="bubble"></div><div class="won"></div></div>
+    <div id="deck"></div>
+    <div id="dip" hidden></div>
+    <div id="msg"></div>
+    <div id="trick"></div>
+    <div id="kozbar" hidden></div>
+    <div id="panel" hidden></div>
+  </div>
+
+  <div id="me" class="seat-me" style="position: relative;">
+    <div class="name" id="myname">Sen</div>
+    <div class="bubble"></div>
+    <div class="won"></div>
+    <div id="hand"></div>
+  </div>
+
+
+  <div id="yz" hidden>
+    <div class="paper">
+      <h2>Yazboz</h2>
+      <table>
+        <thead><tr><th></th><th>İhale</th><th class="us" id="yzHeadUs">Biz</th><th class="them" id="yzHeadThem">Onlar</th></tr></thead>
+        <tbody id="yzRows"></tbody>
+        <tfoot><tr><td></td><td>Toplam</td><td class="us" id="yzUs">0</td><td class="them" id="yzThem">0</td></tr></tfoot>
+      </table>
+      <div class="result" id="yzResult"></div>
+      <button class="btn close" id="yzClose">Kapat</button>
+    </div>
+  </div>
+
+  <!-- Ana menü -->
+  <div id="menu" class="play">
+    <div id="menuBg"></div>
+    <button class="profile" id="profileChip"><span class="big-av" id="chipAv">🦁</span><span><span id="chipName">Sen</span><small>Profili düzenle ✎</small></span></button>
+    <div class="fan" id="menuFan"></div>
+    <h1>BATAK</h1>
+    <div class="sub">Hedef puana ilk ulaşan kazanır</div>
+    <div class="modes">
+      <button class="mode cont" id="continueBtn" hidden>
+        <span class="mi">▶</span><b>Devam Et</b><small id="continueInfo"></small>
+      </button>
+      <button class="mode" data-mode="esli">
+        <span class="mi">👥</span><b>Eşli Batak</b><small>4 kişi · ikişerli takım · açık el</small>
+      </button>
+      <button class="mode" data-mode="tekli">
+        <span class="mi">👤</span><b>Tekli Batak</b><small>4 kişi · herkes kendine</small>
+      </button>
+      <button class="mode" data-mode="gommeli">
+        <span class="mi">🃏</span><b>Gömmeli Batak</b><small>3 kişi · 16'şar kart · 4 kart dip</small>
+      </button>
+    </div>
+    <button class="menu-link" id="menuSettings">⚙️ Ayarlar</button>
+  </div>
+
+  <!-- Profil (DENEME) -->
+  <div id="profileSheet" class="modal" hidden>
+    <div class="sheet">
+      <h2 id="profTitle">Profil</h2>
+      <p class="welcome" id="profWelcome" hidden>Masada bu isim ve avatarla oynayacaksın. Sonra sol üstten değiştirebilirsin.</p>
+      <div class="set-row"><span>Adın</span><input id="profName" maxlength="12" placeholder="Adını yaz" autocomplete="off"></div>
+      <div class="set-row"><span>Avatarın</span><div class="avatars" id="profAvatars"></div></div>
+      <button class="btn" id="profSave">Kaydet</button>
+    </div>
+  </div>
+
+  <!-- Oyun öncesi seçenekler (DENEME) -->
+  <div id="preGame" hidden>
+    <div class="sheet">
+      <h2 id="preTitle">Eşli Batak</h2>
+      <div class="set-row"><span>Hedef puan</span>
+        <div class="seg" data-pre="target"><button data-v="31">31</button><button data-v="51">51</button><button data-v="71">71</button></div></div>
+      <div class="set-row"><span>Rakip botlar</span>
+        <div class="seg" data-pre="difficulty"><button data-v="kolay">Kolay</button><button data-v="zor">Zor</button></div></div>
+      <button class="btn" id="preStart">Başla</button>
+      <button class="menu-link" id="preCancel">Vazgeç</button>
+    </div>
+  </div>
+
+  <!-- Onay penceresi -->
+  <div id="askBox" hidden>
+    <div class="sheet">
+      <p id="askText"></p>
+      <div class="ask-btns"><button class="menu-link" id="askNo">Vazgeç</button><button class="btn" id="askYes">Evet</button></div>
+    </div>
+  </div>
+
+  <!-- Ayarlar -->
+  <div id="settings" hidden>
+    <div class="sheet">
+      <h2>Ayarlar</h2>
+      <div class="set-row"><span>Ses</span>
+        <div class="seg" data-key="sound"><button data-v="on">Açık</button><button data-v="off">Kapalı</button></div></div>
+      <div class="set-row"><span>Oyun hızı</span>
+        <div class="seg" data-key="speed"><button data-v="slow">Yavaş</button><button data-v="normal">Normal</button><button data-v="fast">Hızlı</button></div></div>
+      <div class="set-row"><span>Dağıtım animasyonu</span>
+        <div class="seg" data-key="dealAnim"><button data-v="on">Açık</button><button data-v="off">Kapalı</button></div></div>
+      <div class="set-row"><span>Masa rengi</span>
+        <div class="seg swatches" data-key="felt"><button data-v="green" class="sw-green" title="Yeşil"></button><button data-v="navy" class="sw-navy" title="Lacivert"></button><button data-v="red" class="sw-red" title="Bordo"></button></div></div>
+      <button class="btn" id="setClose">Tamam</button>
+      <button class="menu-link danger" id="toMenu">Ana menüye dön</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- Sabitler ----
+// Oturma yerleri: 0 = sen (alt), 1 = sağ, 2 = eşin (üst), 3 = sol.
+// Oyun sağa doğru döner: 0 → 1 → 2 → 3.
+const SUIT_ORDER = ['S', 'D', 'C', 'H'];           // maça, karo, sinek, kupa
+const SUIT_SYMBOL = { S: '♠', D: '♦', C: '♣', H: '♥' };
+const RED = { D: true, H: true };
+const RANK_LABEL = { 14: 'A', 13: 'K', 12: 'Q', 11: 'J' };
+const DEAL_STEP = 34;   // iki kart arası süre (ms) → 52 kart ≈ 1,8 sn
+const FLY_TIME = 260;   // bir kartın uçuş süresi (ms)
+const BOT_DELAY = 750;  // botun düşünme süresi (ms)
+// Botlara rastgele Türkçe isim verilir: oyun açılınca ve bir oyun (51) bitip yenisi başlayınca
+const BOT_NAMES = ['Ahmet', 'Mehmet', 'Ayşe', 'Fatma', 'Mustafa', 'Zeynep', 'Emre', 'Elif', 'Burak',
+  'Selin', 'Hasan', 'Hüseyin', 'Murat', 'Esra', 'Kemal', 'Deniz', 'Cem', 'Merve', 'Oğuz', 'Gül',
+  'Serkan', 'Ebru', 'Volkan', 'Derya', 'Tuncay', 'Sibel', 'Barış', 'Pınar', 'Erkan', 'Aslı'];
+const NAMES = ['Sen', 'Sağ', 'Eşin', 'Sol'];   // pickNames() ile güncellenir
+// Her botun oyun karakteri: + cesur (ihaleye kolay girer), − temkinli. İsimlerle birlikte seçilir.
+const BOT_STYLE = [0, 0, 0, 0];
+function pickNames() {
+  const pool = BOT_NAMES.slice();
+  const avPool = AVATARS.filter(a => a !== profile.avatar);
+  for (const s of [1, 2, 3]) {
+    NAMES[s] = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    BOT_STYLE[s] = (Math.random() * 2 - 1) * 0.6;
+    AV[s] = avPool.splice(Math.floor(Math.random() * avPool.length), 1)[0];
+  }
+}
+
+// ---- Profil ve avatarlar (DENEME) ----
+const AVATARS = ['🦁', '🐯', '🦊', '🐺', '🐻', '🐼', '🦉', '🦅', '🐸', '🐙', '🐬', '🦄', '🐲', '🐵', '🐱', '🐶'];
+const profile = { name: '', avatar: '🦁' };
+try { Object.assign(profile, JSON.parse(localStorage.getItem('batak-profile') || '{}')); } catch (e) {}
+const AV = [profile.avatar, '🦊', '🐼', '🐺'];   // her oturmanın avatarı
+const myName = () => (profile.name || '').trim() || 'Sen';
+const displayName = (s) => s === 0 ? myName() : NAMES[s];
+// Türkçe ek uyumu: Ahmet'ten / Ayşe'den, Burak'ta / Elif'te
+function suffix(name, back, front) {
+  const vowels = name.toLowerCase().match(/[aıoueiöü]/g) || ['e'];
+  const v = 'aıou'.includes(vowels[vowels.length - 1]) ? back : front;
+  const hard = 'fstkçşhp'.includes(name.slice(-1).toLowerCase());
+  return name + "'" + (hard ? 't' : 'd') + v;
+}
+const nameFrom = (s) => s === 0 ? 'senden' : suffix(NAMES[s], 'an', 'en');   // "... başlıyor"
+const nameAt = (s) => s === 0 ? 'sende' : suffix(NAMES[s], 'a', 'e');        // "İhale ..."
+
+const $ = (id) => document.getElementById(id);
+const app = $('app');
+
+const state = {
+  dealer: Math.floor(Math.random() * 4),
+  hands: [[], [], [], []],
+  deck: [],
+  dealing: false,
+  timers: [],
+  flights: [],
+  sound: true,
+  phase: 'idle',            // idle | dealing | bidding | trump | ready
+  scores: [0, 0],           // [biz, onlar]
+  open: [false, false, false, false],   // eli masaya açılan oyuncu
+  bid: null,
+  contract: null,           // { seat, bid, trump }
+  history: [],              // yazboz satırları: { contract, tricks: [biz, onlar], delta: [biz, onlar] }
+  play: null,               // kart oynama durumu
+  played: new Set(),        // oynanmış kartlar ("H14" gibi)
+  playable: null,           // senin oynayabileceğin kartlar: { seat, keys }
+  gameOver: false,
+};
+let TARGET = 51;          // hedef puan: oyun öncesi seçilir (31 / 51 / 71)
+state.difficulty = 'zor'; // rakip botlar: 'kolay' ya da 'zor'
+const PLAY_DELAY = 650;     // botun kart atma süresi (ms)
+const TRICK_PAUSE = 1000;   // el tamamlanınca kartların ortada kalma süresi (ms)
+const keyOf = (c) => c.suit + c.rank;
+// Modlar: 'esli' (4 kişi, 2'ye 2), 'tekli' (4 kişi, herkes kendine), 'gommeli' (3 kişi, 16'şar kart + 4 kart dip)
+const isGommeli = () => state.mode === 'gommeli';
+const isSolo = () => state.mode === 'tekli' || isGommeli();   // herkes kendine oynanan modlar
+// Masadaki oyuncular: gömmelide üstteki koltuk (2) boş
+const SEATS = () => isGommeli() ? [0, 1, 3] : [0, 1, 2, 3];
+const nextSeat = (s) => { let n = (s + 1) % 4; if (isGommeli() && n === 2) n = 3; return n; };
+const PLAYERS = () => SEATS().length;
+const HAND_SIZE = () => isGommeli() ? 16 : 13;   // kişi başı kart = eldeki el sayısı
+const TRICKS = HAND_SIZE;
+const MAX_BID = () => HAND_SIZE();
+// Bu el sırasında henüz kart atmamış oyuncular (sıra önemsiz)
+const laterSeats = (trick) => SEATS().filter(s => !trick.some(t => t.seat === s));
+// Takım:
+//  - Eşli: 0 ve 2 → biz (0), 1 ve 3 → onlar (1)
+//  - Tekli: kart oynanırken ihaleci tek başına (0), diğer üçü onu batırmak için aynı tarafta (1).
+//    İhaleci battıktan sonra (ya da ihale öncesi) herkes kendi başına (10 + oturma).
+function teamOf(seat) {
+  if (!isSolo()) return seat % 2;
+  const c = state.contract, p = state.play;
+  if (!c || !p) return 10 + seat;
+  const declWon = p.won[c.seat];
+  const sunk = declWon + (TRICKS() - p.trickNo) < c.bid;   // ihaleci artık tutturamaz
+  if (sunk) return 10 + seat;
+  return seat === c.seat ? 0 : 1;
+}
+// Eş: sadece eşli oyunda var (karşıdaki oyuncu). Tekli oyunda eş yok (-1).
+const partnerOf = (seat) => isSolo() ? -1 : (seat + 2) % 4;
+// İhale sınırları: eşli 8–13 (herkes pas derse 7), tekli 5–13 (herkes pas derse 4),
+// gömmeli 8–16 (herkes pas derse 7)
+const MIN_BID = () => state.mode === 'tekli' ? 5 : 8;
+const FORCED_BID = () => state.mode === 'tekli' ? 4 : 7;
+
+// ---- Ayarlar (cihazda hatırlanır) ----
+const settings = { sound: 'on', speed: 'normal', dealAnim: 'on', felt: 'green' };
+try {
+  Object.assign(settings, JSON.parse(localStorage.getItem('batak-settings') || '{}'));
+  if (localStorage.getItem('batak-sound') === 'off') settings.sound = 'off';   // eski sürümden kalan ses ayarı
+} catch (e) {}
+function saveSettings() { try { localStorage.setItem('batak-settings', JSON.stringify(settings)); } catch (e) {} }
+// Oyun hızı: bekleme sürelerini çarpar
+const SPEED = { slow: 1.5, normal: 1, fast: 0.55 };
+const T = (ms) => ms * (SPEED[settings.speed] || 1);
+function applySettings() {
+  state.sound = settings.sound === 'on';
+  app.dataset.felt = settings.felt;
+  document.querySelectorAll('#settings .seg').forEach(seg => {
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === settings[seg.dataset.key]));
+  });
+}
+
+// ---- Deste ----
+function newDeck() {
+  const deck = [];
+  for (const suit of SUIT_ORDER) {
+    for (let rank = 2; rank <= 14; rank++) deck.push({ suit, rank });
+  }
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function sortHand(hand) {
+  return hand.sort((a, b) =>
+    SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit) || b.rank - a.rank);
+}
+
+// ---- Ses ----
+let audioCtx = null;
+function initAudio() {
+  if (audioCtx) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+}
+function playCardSound() {
+  if (!state.sound || !audioCtx) return;
+  const len = Math.floor(audioCtx.sampleRate * 0.045);
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass'; filter.frequency.value = 2600; filter.Q.value = 0.8;
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.12;
+  src.connect(filter).connect(gain).connect(audioCtx.destination);
+  src.start();
+}
+
+// ---- Ölçüler ----
+function cardSize() {
+  const w = $('hand').clientWidth || 360;
+  const cw = Math.max(44, Math.min(70, Math.floor(w / 5.6)));
+  const ch = Math.round(cw * 1.42);
+  return { cw, ch, rowGap: Math.round(ch * 0.5) };   // üst sıranın görünen yüksekliği
+}
+
+// El iki sıra halinde dizilir: üstte yarısı (13 kartta 7), altta kalanı.
+// Bir renk gerekirse iki sıraya bölünebilir.
+function rowSplit(hand) {
+  const n = hand.length;
+  return n <= 7 ? n : Math.ceil(n / 2);       // az kart kaldıysa tek sıra
+}
+
+// Her kartın eldeki konumu (x, y)
+function handLayout(count, split) {
+  const w = $('hand').clientWidth;
+  const { cw, rowGap } = cardSize();
+  const rows = split >= count ? [count] : [split, count - split];
+  const pos = [];
+  rows.forEach((c, r) => {
+    const step = c > 1 ? Math.min(cw * 0.8, (w - 16 - cw) / (c - 1)) : 0;
+    const left0 = (w - (step * (c - 1) + cw)) / 2;
+    for (let i = 0; i < c; i++) pos.push({ x: left0 + i * step, y: r * rowGap });
+  });
+  return pos;
+}
+function relRect(el) {
+  const a = app.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  return { x: r.left - a.left, y: r.top - a.top, w: r.width, h: r.height };
+}
+
+// ---- Çizim ----
+function cardEl(card, faceUp) {
+  const el = document.createElement('div');
+  if (!faceUp) { el.className = 'card back'; return el; }
+  el.dataset.key = keyOf(card);
+  const isFace = card.rank >= 11 && card.rank <= 13;
+  el.className = 'card' + (RED[card.suit] ? ' red' : '') + (isFace ? ' face' : '');
+  const label = RANK_LABEL[card.rank] || card.rank;
+  const sym = SUIT_SYMBOL[card.suit];
+  const corner = `<div class="cr"><span class="r">${label}</span><span class="s">${sym}</span></div>`;
+  el.innerHTML = isFace ? corner + faceSVG(card.rank, card.suit) : corner + `<div class="cc">${sym}</div>`;
+  return el;
+}
+
+// K (Papaz), Q (Kız), J (Vale) resimleri: Byron Knoll'un kamu malı (public domain) kart seti
+function faceImgSrc(rank, suit) {
+  return `img/${RANK_LABEL[rank]}${suit}.png`;
+}
+function faceSVG(rank, suit) {
+  return `<img class="fig" src="${faceImgSrc(rank, suit)}" alt="" draggable="false">`;
+}
+// Resimleri önceden yükle, kartlar açılınca beklemeden görünsün
+for (const suit of SUIT_ORDER) for (const rank of [11, 12, 13]) new Image().src = faceImgSrc(rank, suit);
+
+function renderMyHand(faceUp, animate) {
+  const hand = $('hand');
+  const { cw, ch, rowGap } = cardSize();
+  hand.style.setProperty('--cw', cw + 'px');
+  hand.style.setProperty('--ch', ch + 'px');
+  hand.style.height = (rowGap + ch + 4) + 'px';
+  hand.innerHTML = '';
+  // Dağıtım sırasında kartlar kapalı gelir: sabit 7 + 6 yuva, kartlar geldikçe yerleri kaymaz
+  const cards = state.hands[0];
+  const pos = faceUp ? handLayout(cards.length, rowSplit(cards)) : handLayout(HAND_SIZE(), Math.ceil(HAND_SIZE() / 2));
+  cards.forEach((card, i) => {
+    const el = cardEl(card, faceUp);
+    el.style.left = pos[i].x + 'px';
+    el.style.top = pos[i].y + 'px';
+    el.style.zIndex = i;
+    if (faceUp) markPlayable(el, 0, card);
+    if (faceUp && state.burying) markBury(el, card);
+    if (faceUp && state.newDip && state.newDip.has(keyOf(card))) el.classList.add('newdip');
+    if (animate) { el.classList.add('flip'); el.style.animationDelay = (i * 25) + 'ms'; }
+    hand.appendChild(el);
+  });
+}
+
+function renderBotSeat(seat) {
+  if (state.open[seat]) return renderOpenSeat(seat);
+  const box = document.querySelector(`#seat${seat} .backs`);
+  box.classList.remove('open');
+  const horizontal = seat === 2;
+  const gaps = HAND_SIZE() - 1;   // 13 kartta 12, gömmelide 16 kartta 15 aralık
+  box.style.width = horizontal ? (gaps * 10 + 26) + 'px' : '26px';
+  box.style.height = horizontal ? '38px' : (gaps * 8 + 38) + 'px';
+  box.innerHTML = '';
+  state.hands[seat].forEach((_, i) => {
+    const el = document.createElement('div');
+    el.className = 'sback back';
+    el.style[horizontal ? 'left' : 'top'] = (i * (horizontal ? 10 : 8)) + 'px';
+    box.appendChild(el);
+  });
+}
+
+// İhaleyi alanın eşinin eli masaya açık olarak dizilir
+function renderOpenSeat(seat) {
+  const box = document.querySelector(`#seat${seat} .backs`);
+  box.classList.add('open');
+  box.innerHTML = '';
+  const cards = state.hands[seat];
+  // senin elin gibi: 7 üstte, 6 altta (az kart kalınca tek sıra)
+  const split = rowSplit(cards);
+  const groups = split >= cards.length ? [cards] : [cards.slice(0, split), cards.slice(split)];
+  if (seat === 2) {
+    // üstteki eş: iki yatay sıra
+    const cw = 40, ch = 57, rowGap = 27;
+    const avail = Math.min(300, $('table').clientWidth - 130);
+    box.style.width = avail + 'px';
+    box.style.height = ((groups.length - 1) * rowGap + ch) + 'px';
+    groups.forEach((row, r) => {
+      const step = row.length > 1 ? Math.min(cw * 0.85, (avail - cw) / (row.length - 1)) : 0;
+      const left0 = (avail - (step * (row.length - 1) + cw)) / 2;
+      row.forEach((c, i) => {
+        const el = cardEl(c, true);
+        el.style.left = (left0 + i * step) + 'px'; el.style.top = (r * rowGap) + 'px';
+        markPlayable(el, seat, c); box.appendChild(el);
+      });
+    });
+  } else {
+    // yandaki oyuncular: dar alan için iki dikey sütun (7 + 6)
+    const cw = 36, ch = 51, step = 17, colGap = 24;
+    box.style.width = ((groups.length - 1) * colGap + cw) + 'px';
+    box.style.height = (step * Math.max(0, groups[0].length - 1) + ch + (groups.length - 1) * 8) + 'px';
+    groups.forEach((col, k) => col.forEach((c, i) => {
+      const el = cardEl(c, true);
+      el.style.left = (k * colGap) + 'px'; el.style.top = (i * step + k * 8) + 'px';
+      box.appendChild(el);
+    }));
+  }
+}
+
+// Sıra sendeyse: kurala uygun kartlar tıklanabilir, diğerleri koyulaşır
+function markPlayable(el, seat, card) {
+  const p = state.playable;
+  if (!p || p.seat !== seat) return;
+  if (p.keys.has(keyOf(card))) {
+    el.classList.add('playable');
+    el.addEventListener('click', (e) => { e.stopPropagation(); humanPlay(seat, card); });
+  } else {
+    el.classList.add('dim');
+    el.addEventListener('click', () => { el.classList.remove('shake'); el.offsetWidth; el.classList.add('shake'); });
+  }
+}
+
+function renderSeat(seat, faceUp) {
+  if (seat === 0) renderMyHand(faceUp, false); else renderBotSeat(seat);
+}
+
+function markDealer() {
+  for (let s = 0; s < 4; s++) {
+    const nameEl = s === 0 ? $('myname') : document.querySelector(`#seat${s} .name`);
+    nameEl.classList.toggle('dealer', s === state.dealer);
+  }
+}
+
+// Deste, dağıtanın önüne (masanın ortasına doğru) konur
+function placeDeck() {
+  const deck = $('deck');
+  const table = relRect($('table'));
+  const seatEl = state.dealer === 0 ? $('myname') : document.querySelector(`#seat${state.dealer} .backs`);
+  const s = relRect(seatEl);
+  const cx = table.x + table.w / 2, cy = table.y + table.h * 0.45;
+  const sx = s.x + s.w / 2, sy = s.y + s.h / 2;
+  const x = sx + (cx - sx) * 0.42, y = sy + (cy - sy) * 0.42;
+  deck.style.left = (x - 15 - table.x) + 'px';
+  deck.style.top = (y - 22 - table.y) + 'px';
+  deck.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const l = document.createElement('div');
+    l.className = 'sback back';
+    l.style.left = (-i) + 'px'; l.style.top = (-i) + 'px';
+    deck.appendChild(l);
+  }
+  deck.style.display = 'block';
+  return { x: x - 13, y: y - 19 };
+}
+
+// Uçan kartın hedefi (seat -1 = gömmelide ortadaki dip)
+function targetPos(seat, index) {
+  if (seat === -1) {
+    const d = relRect($('dip'));
+    return { x: d.x + index * 12, y: d.y };
+  }
+  if (seat === 0) {
+    const h = relRect($('hand'));
+    const { cw, ch } = cardSize();
+    const p = handLayout(HAND_SIZE(), Math.ceil(HAND_SIZE() / 2))[index];
+    return { x: h.x + p.x + (cw - 26) / 2, y: h.y + p.y + (ch - 38) / 2 };
+  }
+  const b = relRect(document.querySelector(`#seat${seat} .backs`));
+  return seat === 2
+    ? { x: b.x + index * 10, y: b.y }
+    : { x: b.x, y: b.y + index * 8 };
+}
+
+// ---- Dağıtım ----
+function deal() {
+  if (state.dealing) return;
+  state.timers.forEach(clearTimeout);   // önceki elden kalan bot hamleleri iptal
+  state.timers = [];
+  state.dealing = true;
+  state.phase = 'dealing';
+  $('msg').textContent = '';
+  state.hands = [[], [], [], []];
+  state.deck = newDeck();
+  resetRound();
+  markDealer();
+  for (let s = 0; s < 4; s++) renderSeat(s, false);
+  const from = placeDeck();
+
+  const counts = { '-1': 0, 0: 0, 1: 0, 2: 0, 3: 0 };
+  state.deck.forEach((card, i) => {
+    const seat = dealSeat(i);
+    const index = counts[seat]++;
+    const t = setTimeout(() => launch(card, seat, index, from, i === 51), i * DEAL_STEP);
+    state.timers.push(t);
+  });
+  if (settings.dealAnim === 'off') skipDeal();   // ayarlardan dağıtım animasyonu kapatıldıysa
+}
+
+// Destenin i'inci kartı kime gider: dağıtanın sağından başlayıp sırayla.
+// Gömmelide 48 kart üç oyuncuya, son 4 kart ortadaki dipe (-1) gider.
+function dealSeat(i) {
+  if (isGommeli() && i >= 48) return -1;
+  const order = [];
+  let s = state.dealer;
+  for (let k = 0; k < PLAYERS(); k++) { s = nextSeat(s); order.push(s); }
+  return order[i % PLAYERS()];
+}
+function renderDip() {
+  const box = $('dip');
+  box.innerHTML = '';
+  state.dip.forEach((_, i) => {
+    const el = document.createElement('div');
+    el.className = 'sback back';
+    el.style.left = (i * 12) + 'px';
+    box.appendChild(el);
+  });
+  box.hidden = !state.dip.length;
+}
+
+function launch(card, seat, index, from, isLast) {
+  const to = targetPos(seat, index);
+  const fly = document.createElement('div');
+  fly.className = 'flyer back';
+  fly.style.left = from.x + 'px';
+  fly.style.top = from.y + 'px';
+  app.appendChild(fly);
+  playCardSound();
+  const spin = (Math.random() * 30 - 15).toFixed(0);
+  const anim = fly.animate(
+    [{ transform: `translate(0,0) rotate(${spin}deg)` },
+     { transform: `translate(${to.x - from.x}px, ${to.y - from.y}px) rotate(0deg)` }],
+    { duration: FLY_TIME, easing: 'cubic-bezier(.2,.7,.3,1)' });
+  state.flights.push({ anim, fly });
+  anim.onfinish = () => {
+    fly.remove();
+    if (seat === -1) { state.dip.push(card); renderDip(); }
+    else { state.hands[seat].push(card); renderSeat(seat, false); }
+    if (isLast) finishDeal();
+  };
+}
+
+// Ekrana dokununca dağıtımı atla
+function skipDeal() {
+  if (!state.dealing) return;
+  state.timers.forEach(clearTimeout);
+  state.flights.forEach(({ anim, fly }) => { anim.cancel(); fly.remove(); });
+  state.hands = [[], [], [], []];
+  state.dip = [];
+  state.deck.forEach((card, i) => { const s = dealSeat(i); if (s === -1) state.dip.push(card); else state.hands[s].push(card); });
+  for (let s = 1; s < 4; s++) renderBotSeat(s);
+  renderDip();
+  finishDeal();
+}
+
+function finishDeal() {
+  state.timers = [];
+  state.flights = [];
+  state.dealing = false;
+  $('deck').style.display = 'none';
+  state.hands.forEach(sortHand);
+  renderMyHand(true, true);
+  state.timers.push(setTimeout(startBidding, 600));
+}
+
+// ---- Yeni el için temizlik ----
+function resetRound() {
+  state.open = [false, false, false, false];
+  state.dip = [];          // gömmeli: ortadaki 4 kart
+  state.buried = null;     // gömmeli: ihalecinin gömdüğü 4 kart (sadece ihaleci bilir)
+  state.burying = null;    // gömmeli: sen gömüyorsan seçtiğin kartlar
+  state.newDip = null;     // gömmeli: dipten sana yeni gelen kartlar (kısa süre parlar)
+  renderDip();
+  $('seat2').hidden = isGommeli();   // gömmelide üst koltuk boş
+  state.bid = null;
+  state.contract = null;
+  state.play = null;
+  state.played = new Set();
+  state.playable = null;
+  $('trick').innerHTML = '';
+  updateTally();
+  clearBubbles();
+  highlightTurn(-1);
+  $('panel').hidden = true;
+  $('kozbar').hidden = true;
+  $('table').classList.remove('koz');
+  $('contract').textContent = '';
+  updateNames();
+}
+
+// ---- Görsel yardımcılar ----
+function nameEl(seat) {
+  return seat === 0 ? $('myname') : document.querySelector(`#seat${seat} .name`);
+}
+function bubbleEl(seat) {
+  return seat === 0 ? document.querySelector('#me .bubble') : document.querySelector(`#seat${seat} .bubble`);
+}
+function setBubble(seat, text, isPass) {
+  const b = bubbleEl(seat);
+  b.textContent = text;
+  b.classList.toggle('pass', !!isPass);
+  b.style.animation = 'none'; b.offsetWidth; b.style.animation = '';   // animasyonu yeniden başlat
+}
+function clearBubbles() { for (let s = 0; s < 4; s++) bubbleEl(s).textContent = ''; }
+function highlightTurn(seat) { for (let s = 0; s < 4; s++) nameEl(s).classList.toggle('turn', s === seat); }
+function updateNames() {
+  for (let s = 0; s < 4; s++) {
+    nameEl(s).innerHTML = `<span class="av">${AV[s]}</span>` + displayName(s) +
+      (state.open[s] ? ' <span class="tag">· Açık el</span>' : '');
+  }
+  // Sol üstteki takım isimleri
+  $('team0').textContent = `${myName()} · ${NAMES[2]}`;
+  $('team1').textContent = `${NAMES[1]} · ${NAMES[3]}`;
+  if (isSolo()) updateScoreboard(false);   // teklide üstteki avatarlar da güncellensin
+}
+function suitHTML(suit) {
+  return RED[suit] ? `<span class="red">${SUIT_SYMBOL[suit]}</span>` : SUIT_SYMBOL[suit];
+}
+
+// ---- Bot el değerlendirmesi ----
+// Elin, verilen koz ile kaç el alabileceğini kabaca tahmin eder
+function estimateTricks(hand, trump) {
+  let tricks = 0;
+  const bySuit = { S: [], D: [], C: [], H: [] };
+  hand.forEach(c => bySuit[c.suit].push(c.rank));
+  const trumpLen = bySuit[trump].length;
+  for (const suit of SUIT_ORDER) {
+    const ranks = bySuit[suit].sort((a, b) => b - a);
+    const len = ranks.length;
+    const has = (r) => ranks.includes(r);
+    if (has(14)) tricks += 1;
+    if (has(13)) tricks += len >= 2 ? (has(14) ? 0.9 : 0.7) : 0.25;
+    if (has(12)) tricks += len >= 3 ? (has(14) || has(13) ? 0.6 : 0.4) : 0.1;
+    if (has(11) && len >= 4) tricks += 0.25;
+    if (suit === trump) {
+      tricks += Math.max(0, len - 3) * 0.9;          // uzun koz ekstra el getirir
+    } else {
+      if (len >= 5) tricks += (len - 4) * 0.3;        // uzun yan renk
+      if (trumpLen >= 3) {                             // kısa renkte koz çakma şansı
+        if (len === 0) tricks += 1.1;
+        else if (len === 1) tricks += 0.6;
+        else if (len === 2) tricks += 0.2;
+      }
+    }
+  }
+  return tricks;
+}
+function bestTrump(hand) {
+  let best = { suit: 'S', tricks: -1 };
+  for (const suit of SUIT_ORDER) {
+    const t = estimateTricks(hand, suit);
+    if (t > best.tricks) best = { suit, tricks: t };
+  }
+  return best;
+}
+
+// ---- İhale ----
+// Kurallar:
+//  - İhale dağıtanın sağındaki oyuncudan (açan) başlar, sağa doğru döner. Teklifler 8–13.
+//  - Pas diyen o elde tekrar teklif veremez. İstisna: açan oyuncu ilk turda pas dediyse
+//    ve sonra biri ihaleye girerse, açana bir söz hakkı daha verilir.
+//  - Biri dışında herkes pas deyince ihale biter.
+//  - Kimse ihaleye girmezse açan oyuncu 7'den (isterse daha yükseğinden) girmek zorundadır.
+const PARTNER_EST = 3;   // eşin elinden beklenen ortalama el sayısı
+
+// Gömmelide el gücü hesabına eklenen pay: dipten gelen 4 kart ve 3 kişilik masada 16 kartlık
+// elin getirdiği fazla el (el gücü hesabı 13 kartlık el için ayarlı). Dip şansa bağlı olduğu için
+// temkinli tutuldu: simülasyonda ellerin ~%13'ünde herkes pas diyor.
+const DIP_EST = 2.2;
+// Kendi elim dışında ihaleye katkı: eşlide eşimin eli, gömmelide dip, teklide yok
+const helpEst = () => isSolo() ? (isGommeli() ? DIP_EST : 0) : PARTNER_EST;
+
+function startBidding() {
+  const opener = nextSeat(state.dealer);
+  state.phase = 'bidding';
+  state.bid = {
+    opener, high: 0, highSeat: -1,
+    passed: [false, false, isGommeli(), false],   // gömmelide boş koltuk (2) ihaleye katılmaz
+    bidders: [false, false, false, false],
+    openerFirstPass: false, openerReused: false,
+  };
+  $('msg').textContent = `İhale ${nameFrom(opener)} başlıyor`;
+  nextBidTurn(opener);
+}
+
+function canBid(seat) {
+  const b = state.bid;
+  if (seat === b.highSeat) return false;
+  if (!b.passed[seat]) return true;
+  return seat === b.opener && b.openerFirstPass && !b.openerReused && b.high > 0;
+}
+
+function nextBidTurn(from) {
+  const b = state.bid;
+  if (b.high === 0 && b.passed.every(Boolean)) return forcedBid();
+  if (b.high > 0 && !SEATS().some(canBid)) return endBidding(b.highSeat, b.high);
+  let seat = from;
+  while (!canBid(seat)) seat = (seat + 1) % 4;
+  highlightTurn(seat);
+  if (seat === 0) showBidPanel(false);
+  else state.timers.push(setTimeout(() => bidAction(seat, botBid(seat)), T(BOT_DELAY)));
+}
+
+function bidAction(seat, value) {
+  const b = state.bid;
+  if (b.passed[seat] && seat === b.opener) b.openerReused = true;   // açanın ikinci söz hakkı kullanıldı
+  if (!value) {
+    b.passed[seat] = true;
+    if (seat === b.opener && b.high === 0) b.openerFirstPass = true;
+    setBubble(seat, 'Pas', true);
+  } else {
+    b.passed[seat] = false;
+    b.high = value; b.highSeat = seat; b.bidders[seat] = true;
+    setBubble(seat, String(value));
+    $('msg').textContent = `En yüksek: ${NAMES[seat]} · ${value}`;
+  }
+  nextBidTurn((seat + 1) % 4);
+}
+
+function forcedBid() {
+  const seat = state.bid.opener;
+  highlightTurn(seat);
+  $('msg').textContent = `Herkes pas dedi · ${displayName(seat)} en az ${FORCED_BID()} ile girmek zorunda`;
+  if (seat === 0) showBidPanel(true);
+  else state.timers.push(setTimeout(() => {
+    const est = bestTrump(state.hands[seat]).tricks + helpEst();
+    const v = est >= FORCED_BID() + 1.5 ? Math.min(13, Math.floor(est - 0.5)) : FORCED_BID();
+    setBubble(seat, String(v));
+    endBidding(seat, v);
+  }, T(BOT_DELAY)));
+}
+
+// Tekli oyunda botun ihale kararı: sadece kendi eli (yardım eden eş yok) ve kendi puanı
+function soloBotBid(seat) {
+  const minBid = Math.max(MIN_BID(), state.bid.high + 1);
+  if (minBid > MAX_BID()) return 0;
+  const est = bestTrump(state.hands[seat]).tricks + helpEst();
+  const me = state.scores[seat];
+  const leader = Math.max(...state.scores.filter((_, i) => i !== seat));
+  let need = minBid;
+  if (TARGET - me <= Math.round(TARGET * 6 / 51)) need += 3;   // hedefe çok yakınım: riske girme
+  else if (leader - me >= 10) need -= 0.5;                      // gerideyim: biraz daha cesur
+  need -= BOT_STYLE[seat] + (Math.random() * 2 - 1) * 0.25;
+  return est >= need ? minBid : 0;
+}
+
+// Botun ihale kararı: elinin gücüne ve skora göre
+function botBid(seat) {
+  if (isEasy(seat)) return easyBid(seat);
+  if (isSolo()) return soloBotBid(seat);
+  const b = state.bid;
+  const minBid = Math.max(8, b.high + 1);
+  if (minBid > MAX_BID()) return 0;
+  const team = teamOf(seat);
+  const diff = state.scores[team] - state.scores[1 - team];   // + öndeyiz, − gerideyiz
+  const partner = partnerOf(seat);
+  const hand = state.hands[seat];
+  const best = bestTrump(hand);
+  const teamEst = best.tricks + PARTNER_EST + (b.bidders[partner] ? 1 : 0);
+  const trumpLen = hand.filter(c => c.suit === best.suit).length;
+  // Kaç renkte as ya da papaz var: her renkten güzel kağıt = iyi savunma eli
+  const honorSuits = SUIT_ORDER.filter(s => hand.some(c => c.suit === s && c.rank >= 13)).length;
+
+  // Hedefe çok yakınız (51'lik oyunda 6 puan; 31'de 4, 71'de 8 puan kala). Karar elin yapısına bağlı:
+  //  - Kozu güçlü (en az 5 koz, 2 büyük koz) ve yan renkte alırı (as) varsa: normal şekilde girebilir.
+  //  - Dört renkte de iyi kartı varsa: girmez; savunmada alırlarını alır, rakibi batırmaya oynar.
+  //  - Diğer durumlarda: ancak el belirgin şekilde güçlüyse girer.
+  const nearTarget = TARGET - state.scores[team] <= Math.round(TARGET * 6 / 51);
+  const trumpHonors = hand.filter(c => c.suit === best.suit && c.rank >= 12).length;
+  const sideAces = hand.filter(c => c.suit !== best.suit && c.rank === 14).length;
+  const trumpStrong = trumpLen >= 5 && trumpHonors >= 2;
+  if (nearTarget && !(trumpStrong && sideAces >= 1)) {
+    if (honorSuits >= 4) return 0;
+    if (teamEst < minBid + 2) return 0;
+  }
+
+  // Eşimiz ihaledeyse ancak belirgin şekilde daha güçlüysek üstüne çıkarız
+  if (b.highSeat === partner) return teamEst >= minBid + 1.5 ? minBid : 0;
+
+  let need = minBid;
+  // gerideyiz ya da rakip hedefe yaklaştı (51'lik oyunda 35 puan)
+  const defending = diff <= -10 || state.scores[1 - team] >= Math.round(TARGET * 35 / 51);
+  if (diff >= 20) {
+    need += 2.5;                               // çok öndeyiz: eli çok iyi değilse girme, savunmada topla
+  } else if (diff >= 10) {
+    need += 1;                                 // öndeyiz: biraz daha güçlü el iste
+  } else if (defending) {
+    // Batırma odaklı: rakibi yükseğe itmeye çalışma, o kaçtan girerse girsin batırmaya oyna.
+    if (trumpLen >= 7) need -= 0.5;            // çok kozumuz var: ihaleye gir / yükselt
+    else if (honorSuits >= 3) need += 1.5;     // her renkten güzel kağıt: girme, savunmada batır
+  }
+  // Botun karakteri ve o anki ruh hali: her seferinde aynı sınırda karar vermesin
+  need -= BOT_STYLE[seat] + (Math.random() * 2 - 1) * 0.25;
+  return teamEst >= need ? minBid : 0;
+}
+
+function showBidPanel(forced) {
+  const b = state.bid;
+  const min = forced ? FORCED_BID() : Math.max(MIN_BID(), b.high + 1);
+  const panel = $('panel');
+  let html = (forced ? `<div class="title">Herkes pas dedi — ${FORCED_BID()} veya daha yükseğiyle girmelisin</div>` : '') + `<div class="opts">`;
+  for (let v = min; v <= MAX_BID(); v++) html += `<button class="opt" data-v="${v}">${v}</button>`;
+  if (!forced) html += `<button class="opt pass" data-v="0">Pas</button>`;
+  panel.innerHTML = html + '</div>';
+  panel.hidden = false;
+  panel.querySelectorAll('.opt').forEach(btn => btn.addEventListener('click', () => {
+    panel.hidden = true;
+    const v = Number(btn.dataset.v);
+    if (forced) { setBubble(0, String(v)); endBidding(0, v); }
+    else bidAction(0, v);
+  }));
+}
+
+function endBidding(seat, value) {
+  highlightTurn(-1);
+  state.contract = { seat, bid: value, trump: null };
+  state.phase = 'trump';
+  $('msg').textContent = `İhale ${nameAt(seat)} · ${value}`;
+  if (seat === 0) showTrumpPanel();
+  else state.timers.push(setTimeout(() => setTrump(isEasy(seat) ? easyTrump(seat) : bestTrump(state.hands[seat]).suit), T(BOT_DELAY)));
+}
+
+// ---- Gömmeli: koz → 4 kart gömme → dipi alma ----
+// İhaleci dipi GÖRMEDEN önce kozu söyler, sonra kendi 16 kartından 4 kart gömer, en son dipteki
+// 4 kartı eline alır. Koz dipten sonra değişmez. Dipi ve gömülen kartları sadece ihaleci görür.
+function takeDip(seat) {   // (koz söylendikten sonra çağrılır: gömme aşaması)
+  state.phase = 'bury';
+  if (seat === 0) {
+    state.burying = new Set();
+    renderMyHand(true, false);
+    showBuryPanel();
+    return;
+  }
+  state.timers.push(setTimeout(() => {
+    const bury = isEasy(seat)
+      ? state.hands[seat].slice().sort(() => Math.random() - 0.5).slice(0, 4)
+      : chooseBury(seat, state.contract.trump);   // söylediği koza göre gömer
+    finishBury(seat, bury);
+  }, T(BOT_DELAY)));
+}
+
+// Botun gömeceği 4 kart: kozları ve alırları sakla; kısa renklerdeki küçük kartları gömüp
+// o renkleri boşalt (o renk gelince kozla kesebilsin).
+function chooseBury(seat, T) {
+  const h = state.hands[seat];
+  const len = (s) => h.filter(c => c.suit === s).length;
+  const keep = (c) => {   // düşük puan = gömülür
+    if (c.suit === T) return 100 + c.rank;
+    let v = c.rank;
+    if (c.rank === 14) v += 60;                                                        // as: alır
+    else if (c.rank === 13 && h.some(x => x.suit === c.suit && x.rank === 14)) v += 50; // as–papaz
+    else if (c.rank >= 12) v += 8;
+    v += len(c.suit) * 3;                                                               // kısa renk önce boşalsın
+    return v;
+  };
+  return h.slice().sort((a, b) => keep(a) - keep(b)).slice(0, 4);
+}
+
+// 4 kart gömüldü → dipi al → oyun başlar
+function finishBury(seat, cards) {
+  const keys = new Set(cards.map(keyOf));
+  state.buried = cards;
+  state.hands[seat] = state.hands[seat].filter(c => !keys.has(keyOf(c)));
+  state.burying = null;
+  // dipi al
+  const dip = state.dip;
+  state.dip = [];
+  renderDip();
+  state.hands[seat].push(...dip);
+  sortHand(state.hands[seat]);
+  state.newDip = seat === 0 ? new Set(dip.map(keyOf)) : null;   // sana gelen dip kartları kısa süre parlar
+  rerenderSeat(seat);
+  renderKozBar();
+  if (seat === 0) {
+    state.timers.push(setTimeout(() => { state.newDip = null; renderMyHand(true, false); }, 2500));
+    $('msg').textContent = '4 kart gömdün, dipi aldın';
+  } else {
+    $('msg').textContent = `${NAMES[seat]} 4 kart gömdü, dipi aldı`;
+  }
+  state.timers.push(setTimeout(startPlay, 1400));
+}
+
+function showBuryPanel() {
+  const n = state.burying.size;
+  const panel = $('panel');
+  panel.innerHTML = `<div class="title">Dipi görmeden gömülecek 4 kartı seç (${n}/4)</div>
+    <div class="opts"><button class="opt pass" id="buryBtn" ${n === 4 ? '' : 'disabled'}>Göm</button></div>`;
+  panel.hidden = false;
+  $('buryBtn').addEventListener('click', () => {
+    if (state.burying.size !== 4) return;
+    panel.hidden = true;
+    finishBury(0, state.hands[0].filter(c => state.burying.has(keyOf(c))));
+  });
+}
+
+// Gömme sırasında elindeki karta dokununca seçilir / seçim kalkar (en fazla 4)
+function markBury(el, card) {
+  const k = keyOf(card);
+  el.classList.add('playable');
+  el.classList.toggle('bury', state.burying.has(k));
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (state.burying.has(k)) state.burying.delete(k);
+    else if (state.burying.size < 4) state.burying.add(k);
+    renderMyHand(true, false);
+    showBuryPanel();
+  });
+}
+
+function showTrumpPanel() {
+  const panel = $('panel');
+  let html = `<div class="title">Koz ne olsun?</div><div class="opts">`;
+  for (const suit of SUIT_ORDER) {
+    const n = state.hands[0].filter(c => c.suit === suit).length;
+    html += `<button class="opt suit${RED[suit] ? ' red' : ''}" data-s="${suit}">${SUIT_SYMBOL[suit]}<small>${n} kart</small></button>`;
+  }
+  panel.innerHTML = html + '</div>';
+  panel.hidden = false;
+  panel.querySelectorAll('.opt').forEach(btn => btn.addEventListener('click', () => {
+    panel.hidden = true;
+    setTrump(btn.dataset.s);
+  }));
+}
+
+function setTrump(suit) {
+  const c = state.contract;
+  c.trump = suit;
+  state.phase = 'ready';
+  c.name = displayName(c.seat);   // yazboz için o eldeki ismi sakla
+  $('contract').innerHTML = `İhale: ${displayName(c.seat)} ${c.bid} ${suitHTML(suit)}`;
+  const who = c.seat === 0 ? `${c.bid} ile girdin` : `${NAMES[c.seat]} ${c.bid} ile girdi`;
+  $('msg').innerHTML = `${who}, koz ${suitHTML(suit)}`;
+
+  // İhaleyi alanın eşinin eli açılır (tekli oyunda eş ve açık el yok)
+  const partner = partnerOf(c.seat);
+  if (partner >= 0) state.open[partner] = true;
+  updateNames();
+  if (partner > 0) renderOpenSeat(partner);
+
+  renderKozBar();
+  // Gömmeli: koz söylendi, şimdi 4 kart gömülür ve dip alınır; oyun ondan sonra başlar
+  if (isGommeli() && !state.buried) { state.timers.push(setTimeout(() => takeDip(c.seat), T(BOT_DELAY))); return; }
+  state.timers.push(setTimeout(startPlay, 1400));
+}
+
+// =====================================================================
+// ---- Kart oynama kuralları ----
+// =====================================================================
+// - Yerdeki renge uymak zorunlu. Uyuyorsan yerdeki en büyük kartı geçmek zorunlu
+//   (el kozla kesildiyse renge uyan oyuncu geçmek zorunda değil).
+// - Renk yoksa koz çakmak zorunlu. Yerde koz varsa ve büyüğü sendeyse üstüne çıkmak zorunlu.
+// - Ne renk ne koz varsa istediğin kartı atarsın. Koz istendiği zaman açılabilir
+//   (gömmeli hariç: orada koz düşmeden kozla el açılamaz).
+function legalMoves(hand, trick, trump) {
+  if (!trick.length) {
+    // Gömmeli: koz düşmeden (biri kozla kesmeden) kozla el açılamaz; elinde sadece koz kaldıysa mecburen açar
+    if (isGommeli() && state.play && !state.play.trumpBroken) {
+      const nonTrump = hand.filter(c => c.suit !== trump);
+      if (nonTrump.length) return nonTrump;
+    }
+    return hand.slice();
+  }
+  const led = trick[0].card.suit;
+  const trumpOnTable = trick.some(t => t.card.suit === trump);
+  const follow = hand.filter(c => c.suit === led);
+  if (follow.length) {
+    if (led === trump || !trumpOnTable) {
+      const high = Math.max(...trick.filter(t => t.card.suit === led).map(t => t.card.rank));
+      const higher = follow.filter(c => c.rank > high);
+      return higher.length ? higher : follow;
+    }
+    return follow;
+  }
+  const trumps = hand.filter(c => c.suit === trump);
+  if (trumps.length) {
+    if (trumpOnTable) {
+      const highT = Math.max(...trick.filter(t => t.card.suit === trump).map(t => t.card.rank));
+      const higherT = trumps.filter(c => c.rank > highT);
+      return higherT.length ? higherT : trumps;
+    }
+    return trumps;
+  }
+  return hand.slice();
+}
+// a kartı, şu an eli tutan b kartını geçer mi?
+function beats(a, b, trump) {
+  if (a.suit === b.suit) return a.rank > b.rank;
+  return a.suit === trump;
+}
+function trickWinner(trick, trump) {
+  let best = trick[0];
+  for (const t of trick.slice(1)) if (beats(t.card, best.card, trump)) best = t;
+  return best.seat;
+}
+
+// =====================================================================
+// ---- Oyun akışı ----
+// =====================================================================
+const controllerOf = (seat) => state.open[seat] ? partnerOf(seat) : seat;   // açık eli, ihaleyi alan oynar
+
+function startPlay() {
+  state.phase = 'play';
+  $('msg').textContent = '';
+  clearBubbles();
+  state.play = {
+    trick: [], trickNo: 0,
+    won: [0, 0, 0, 0],
+    know: newKnowledge(),
+  };
+  updateTally();
+  nextPlayTurn(state.contract.seat);   // ilk kartı ihaleyi alan atar
+}
+
+// Her oyuncunun önünde bu elde alınan el sayısı yazar:
+// eşlide takımın (kendisi + eşi) toplamı, teklide sadece kendi aldığı
+function updateTally(bumpSeat) {
+  for (let s = 0; s < 4; s++) {
+    const el = s === 0 ? document.querySelector('#me .won') : document.querySelector(`#seat${s} .won`);
+    const p = partnerOf(s);
+    el.textContent = state.play ? `${state.play.won[s] + (p >= 0 ? state.play.won[p] : 0)} el` : '';
+    const together = isSolo() ? s === bumpSeat : s % 2 === bumpSeat % 2;
+    if (bumpSeat !== undefined && together) { el.classList.remove('bump'); el.offsetWidth; el.classList.add('bump'); }
+  }
+}
+
+function nextPlayTurn(seat) {
+  state.play.turn = seat;
+  highlightTurn(seat);
+  if (controllerOf(seat) === 0) {
+    const legal = legalMoves(state.hands[seat], state.play.trick, state.contract.trump);
+    state.playable = { seat, keys: new Set(legal.map(keyOf)) };
+    rerenderSeat(seat);
+  } else {
+    state.timers.push(setTimeout(() => playCard(seat, botChoose(seat)), T(PLAY_DELAY)));
+  }
+}
+
+function rerenderSeat(seat) {
+  if (seat === 0) renderMyHand(true, false);
+  else renderBotSeat(seat);
+}
+
+function humanPlay(seat, card) {
+  if (!state.playable || state.playable.seat !== seat || state.phase !== 'play') return;
+  state.playable = null;
+  playCard(seat, card);
+}
+
+// Kartın ortadaki yeri
+function slotPos(seat) {
+  const t = $('table');
+  const cx = t.clientWidth / 2, cy = t.clientHeight * 0.45;
+  const d = [[0, 46], [46, 0], [0, -46], [-46, 0]][seat];
+  return { x: cx + d[0] - 25, y: cy + d[1] - 35.5 };
+}
+
+function playCard(seat, card) {
+  const play = state.play;
+  // kartın çıktığı yer (animasyon için)
+  const tableR = $('table').getBoundingClientRect();
+  const srcEl = document.querySelector(seat === 0 ? `#hand [data-key="${keyOf(card)}"]` : `#seat${seat} [data-key="${keyOf(card)}"]`)
+             || (seat === 0 ? $('hand') : document.querySelector(`#seat${seat} .backs`));
+  const sr = srcEl.getBoundingClientRect();
+
+  observe(seat, card, play.trick);
+  state.hands[seat] = state.hands[seat].filter(c => keyOf(c) !== keyOf(card));
+  play.trick.push({ seat, card });
+  state.played.add(keyOf(card));
+  playCardSound();
+  rerenderSeat(seat);
+  renderKozBar();
+
+  const el = cardEl(card, true);
+  const to = slotPos(seat);
+  el.style.left = to.x + 'px'; el.style.top = to.y + 'px';
+  el.style.zIndex = play.trick.length;
+  $('trick').appendChild(el);
+  const dx = sr.left + sr.width / 2 - (tableR.left + to.x + 25);
+  const dy = sr.top + sr.height / 2 - (tableR.top + to.y + 35.5);
+  el.animate([{ transform: `translate(${dx}px, ${dy}px) scale(.8)` }, { transform: 'none' }],
+             { duration: 260, easing: 'cubic-bezier(.2,.7,.3,1)' });
+
+  if (play.trick.length === PLAYERS()) state.timers.push(setTimeout(finishTrick, T(TRICK_PAUSE)));
+  else nextPlayTurn(nextSeat(seat));
+}
+
+function finishTrick() {
+  const play = state.play;
+  const winner = trickWinner(play.trick, state.contract.trump);
+  play.won[winner]++;
+  play.trickNo++;
+  updateTally(winner);
+  highlightTurn(-1);
+
+  // kazanılan kartlar kazananın tarafına kayar
+  const wEl = winner === 0 ? $('myname') : document.querySelector(`#seat${winner} .name`);
+  const wr = wEl.getBoundingClientRect();
+  const winKey = keyOf(play.trick.find(t => t.seat === winner).card);
+  const els = [...$('trick').children];
+  els.forEach(el => {
+    if (el.dataset.key === winKey) el.classList.add('win');
+    const r = el.getBoundingClientRect();
+    el.animate([{ transform: 'none', opacity: 1 },
+                { transform: `translate(${wr.left + wr.width / 2 - r.left - r.width / 2}px, ${wr.top + wr.height / 2 - r.top - r.height / 2}px) scale(.4)`, opacity: 0 }],
+               { duration: 380, delay: 250, easing: 'ease-in', fill: 'forwards' });
+  });
+  state.timers.push(setTimeout(() => {
+    $('trick').innerHTML = '';
+    play.trick = [];
+    if (play.trickNo === TRICKS()) endHand();
+    else nextPlayTurn(winner);
+  }, 680));
+}
+
+function endHand() {
+  state.phase = 'handEnd';
+  highlightTurn(-1);
+  const w = state.play.won;
+  // eşlide takım başına, teklide oyuncu başına alınan eller
+  const tricks = isSolo() ? w.slice() : [w[0] + w[2], w[1] + w[3]];
+  const winner = recordHand(state.contract, tricks);
+  state.gameOver = winner !== null;
+  $('yzClose').textContent = state.gameOver ? 'Yeni Oyun' : 'Sonraki El';
+  // Kayıt: oyun bittiyse sil, bitmediyse bir sonraki elin başından devam edilecek şekilde sakla
+  if (state.gameOver) clearSave(); else saveGame(nextSeat(state.dealer));
+}
+
+function closeYazboz() {
+  $('yz').hidden = true;
+  if (state.phase !== 'handEnd') return;
+  if (state.gameOver) {
+    state.scores = isSolo() ? [0, 0, 0, 0] : [0, 0]; state.history = []; state.gameOver = false;
+    updateScoreboard(false);
+    pickNames();   // yeni oyunda yeni rakipler
+    updateNames();
+    saveGame(nextSeat(state.dealer));
+  }
+  $('yzClose').textContent = 'Kapat';
+  state.dealer = nextSeat(state.dealer);   // dağıtıcı sağa geçer
+  deal();
+}
+
+// =====================================================================
+// ---- Botların hafızası: herkesin görebildiği bilgilerden çıkarımlar ----
+// =====================================================================
+// void[p][renk]   = p'de o renk kesin bitti (renge uymadı)
+// cap[p][renk]    = p'nin o renkteki en büyük olabilecek kartı (yükseltmediyse daha büyüğü yok)
+// likely[p][renk] = muhtemelen bitti (eli alamazken büyük kart attı → son kartıydı)
+// disc[p][renk]   = p, renk yokken bu renkten kaç kez kaçtı (o rengi tutmadığını gösterir)
+function newKnowledge() {
+  const mk = () => [{}, {}, {}, {}];
+  return { void: mk(), cap: mk(), likely: mk(), disc: mk() };
+}
+
+function observe(seat, card, trickBefore) {
+  const K = state.play.know, trump = state.contract.trump;
+  if (card.suit === trump) state.play.trumpBroken = true;   // koz düştü (gömmelide artık kozla el açılabilir)
+  if (!trickBefore.length) { K.likely[seat][card.suit] = false; return; }
+  const led = trickBefore[0].card.suit;
+  const trumped = led !== trump && trickBefore.some(t => t.card.suit === trump);
+  if (card.suit === led) {
+    K.likely[seat][led] = false;
+    const high = Math.max(...trickBefore.filter(t => t.card.suit === led).map(t => t.card.rank));
+    let couldNotWin = trumped;
+    if (!trumped && card.rank < high) {
+      // yükseltmek zorunluydu ama yükseltmedi: elinde yerdekinden büyük kart yok
+      K.cap[seat][led] = Math.min(K.cap[seat][led] ?? 14, high - 1);
+      couldNotWin = true;
+    }
+    // eli alamayacakken J/Q/K attı: büyük ihtimalle o renkteki son kartıydı
+    if (couldNotWin && card.rank >= 11) K.likely[seat][led] = true;
+  } else {
+    K.void[seat][led] = true;
+    if (card.suit !== trump) {
+      K.void[seat][trump] = true;                                     // koz çakmadıysa kozu da yok
+      K.disc[seat][card.suit] = (K.disc[seat][card.suit] || 0) + 1;  // bu renkten kaçtı
+    } else if (trumped) {
+      const highT = Math.max(...trickBefore.filter(t => t.card.suit === trump).map(t => t.card.rank));
+      if (card.rank < highT) K.cap[seat][trump] = Math.min(K.cap[seat][trump] ?? 14, highT - 1);
+    }
+  }
+}
+
+// Bir botun bakış açısı: kendi eli + açık el + oynanan kartlar. Gizli ellere ASLA bakmaz.
+function brain(seat) {
+  const ctrl = controllerOf(seat);
+  const knownSeats = new Set([seat, ctrl]);
+  for (let s = 0; s < 4; s++) if (state.open[s]) knownSeats.add(s);
+  const knownKeys = new Set();
+  knownSeats.forEach(s => state.hands[s].forEach(c => knownKeys.add(keyOf(c))));
+  // Oyundan çıkmış kartlar: oynananlar + (gömmelide ihaleci isem) gömdüğüm kartlar
+  const gone = new Set(state.played);
+  const iBuried = isGommeli() && state.buried && ctrl === state.contract.seat;
+  if (iBuried) state.buried.forEach(c => gone.add(keyOf(c)));
+  const unknown = [];
+  for (const suit of SUIT_ORDER) for (let rank = 2; rank <= 14; rank++) {
+    const k = suit + rank;
+    if (!gone.has(k) && !knownKeys.has(k)) unknown.push({ suit, rank });
+  }
+  const byKey = new Map(unknown.map(c => [keyOf(c), c]));
+  const K = state.play.know;
+  const hidden = SEATS().filter(p => !knownSeats.has(p));
+  // Gömmelide ihaleci değilsem: gömülen 4 kart kimsenin elinde değil ama ben bilmiyorum.
+  // Onları "gömü" adında 4 kartlık sanal bir oyuncu gibi sayarım (4 numara).
+  const GOMU = 4;
+  if (isGommeli() && state.buried && !iBuried) hidden.push(GOMU);
+  const handCount = (p) => p === GOMU ? 4 : state.hands[p].length;
+
+  // Kart sayma: her gizli oyuncuda olabilecek kartlar. Herkesin elinde kaç kart kaldığı
+  // görünür; bu sayede kısıtlar daraltılır. Ör. bir oyuncuya gidebilecek kart sayısı
+  // elindeki kart sayısına eşitse o kartların hepsi ondadır, başkasında olamaz.
+  const poss = {};
+  for (const p of hidden) {
+    poss[p] = new Set(unknown.filter(c => p === GOMU || (!K.void[p][c.suit] && c.rank <= (K.cap[p][c.suit] ?? 14))).map(keyOf));
+  }
+  for (const k of byKey.keys()) {   // çelişki olursa (olmamalı) kartı herkese aç
+    if (!hidden.some(p => poss[p].has(k))) hidden.forEach(p => poss[p].add(k));
+  }
+  for (let iter = 0; iter < 8; iter++) {
+    let changed = false;
+    for (const p of hidden) {
+      const n = handCount(p);
+      if (poss[p].size === n) {
+        for (const q of hidden) if (q !== p) for (const k of poss[p]) if (poss[q].delete(k)) changed = true;
+      }
+      // sadece bu oyuncuda olabilecek kartlar elini dolduruyorsa başka kartı yoktur
+      const only = [...poss[p]].filter(k => hidden.every(q => q === p || !poss[q].has(k)));
+      if (only.length === n && poss[p].size > n) { poss[p] = new Set(only); changed = true; }
+    }
+    if (!changed) break;
+  }
+
+  const B = {
+    seat, ctrl, trump: state.contract.trump, team: teamOf(seat), knownSeats, unknown,
+    known: (p) => knownSeats.has(p),
+    gone: (k) => gone.has(k),   // oynandı (ya da benim gömdüğüm kart)
+    // p, koşula uyan bir kart tutuyor olabilir mi?
+    holds(p, pred) {
+      if (knownSeats.has(p)) return state.hands[p].some(pred);
+      for (const k of poss[p]) if (pred(byKey.get(k))) return true;
+      return false;
+    },
+    // p'de bu renk bitmiş mi (kesin ya da muhtemelen)?
+    voidish(p, suit) {
+      if (knownSeats.has(p)) return !state.hands[p].some(c => c.suit === suit);
+      return K.likely[p][suit] || !B.holds(p, c => c.suit === suit);
+    },
+    // bu kartın üstünde, bizim takım dışında kimsede olabilecek kart kaldı mı? (kart sayma)
+    isMaster(c) {
+      for (let r = c.rank + 1; r <= 14; r++) {
+        const k = c.suit + r;
+        if (gone.has(k)) continue;
+        const holder = [...knownSeats].find(s => state.hands[s].some(x => keyOf(x) === k));
+        if (holder === undefined || teamOf(holder) !== B.team) return false;
+      }
+      return true;
+    },
+    // bizim takımın bilinen ellerinde bu kart var mı?
+    oursHas(k) {
+      return [...knownSeats].some(s => teamOf(s) === B.team && state.hands[s].some(x => keyOf(x) === k));
+    },
+  };
+  return B;
+}
+
+// Bizim taraf için durum: kaç el daha lazım (ihaleyi tutturmak ya da rakibi batırmak için)
+// ve garanti kaç elimiz var
+function sideStatus(B) {
+  const c = state.contract, w = state.play.won;
+  const declarerSide = teamOf(c.seat) === B.team;
+  // bizim taraftaki herkesin aldığı eller (eşlide ben + eşim, teklide savunmadaki üç oyuncu)
+  const ourWon = SEATS().filter(s => teamOf(s) === B.team).reduce((n, s) => n + w[s], 0);
+  const need = declarerSide ? c.bid - ourWon : (14 - c.bid) - ourWon;
+  return { declarerSide, need, sure: sureTricks(B) };
+}
+
+// Garanti el sayısı: bilinen ellerimizde her rengin en tepesinden kesintisiz büyük kartlar
+function sureTricks(B) {
+  const ours = [...B.knownSeats].filter(s => teamOf(s) === B.team);
+  let total = 0;
+  for (const X of SUIT_ORDER) {
+    const lens = ours.map(s => state.hands[s].filter(c => c.suit === X).length);
+    if (!Math.max(...lens)) continue;
+    let run = 0;
+    for (let r = 14; r >= 2; r--) {
+      const k = X + r;
+      if (B.gone(k)) continue;
+      if (B.oursHas(k)) run++; else break;
+    }
+    total += Math.min(run, Math.max(...lens));
+  }
+  return total;
+}
+
+// p oyuncusu (sonra oynayacak), şu an eli tutan kartı geçebilir mi?
+function canBeat(B, p, best, led) {
+  const T = B.trump;
+  const vo = B.voidish(p, led);
+  if (best.suit === led) {
+    if (!vo && B.holds(p, c => c.suit === led && c.rank > best.rank)) return true;
+    return led !== T && vo && B.holds(p, c => c.suit === T);
+  }
+  return vo && B.holds(p, c => c.suit === T && c.rank > best.rank);   // en büyük kart koz
+}
+
+// Bu el, bizden sonra oynayacak rakiplere karşı güvende mi?
+function trickSafe(B, trick) {
+  const T = B.trump;
+  const winSeat = trickWinner(trick, T);
+  if (teamOf(winSeat) !== B.team) return false;
+  const best = trick.find(t => t.seat === winSeat).card;
+  const led = trick[0].card.suit;
+  for (const p of laterSeats(trick)) {   // henüz kart atmamış oyuncular
+    if (teamOf(p) !== B.team && canBeat(B, p, best, led)) return false;
+  }
+  return true;
+}
+
+const cardValue = (c, T) => c.rank + (c.suit === T ? 20 : 0);
+const cheapest = (cards, T) => cards.reduce((a, b) => cardValue(b, T) < cardValue(a, T) ? b : a);
+
+// ---- Çeşitlilik: botlar tahmin edilebilir olmasın ----
+const VARY_LEAD = 3;      // el açarken en iyiye bu kadar yakın puanlı kartlardan rastgele biri
+const VARY_DISCARD = 1;   // kaçarken en değersize bu kadar yakın kartlardan rastgele biri
+function pickNear(items, scores, margin, higherIsBetter) {
+  const best = higherIsBetter ? Math.max(...scores) : Math.min(...scores);
+  const near = items.filter((_, i) => higherIsBetter ? scores[i] >= best - margin : scores[i] <= best + margin);
+  return near[Math.floor(Math.random() * near.length)];
+}
+// Aynı işi gören kartlar: aynı renk, aralarındaki her kart ya oynanmış ya da yine bu elde
+// (ör. K–Q, ya da 4'ü çıkmışken 5–3). Bunlardan hangisi atılsa sonuç değişmez.
+function sameJob(card, legal, trick) {
+  const hand = state.hands.find(h => h.includes(card)) || legal;
+  const T = state.contract.trump;
+  const cur = trick.length ? trick.find(t => t.seat === trickWinner(trick, T)).card : null;
+  return legal.filter(x => {
+    if (x.suit !== card.suit) return false;
+    if (cur && beats(x, cur, T) !== beats(card, cur, T)) return false;
+    const lo = Math.min(x.rank, card.rank), hi = Math.max(x.rank, card.rank);
+    for (let r = lo + 1; r < hi; r++) {
+      if (!state.played.has(card.suit + r) && !hand.some(y => y.suit === card.suit && y.rank === r)) return false;
+    }
+    return true;
+  });
+}
+
+// =====================================================================
+// ---- Kolay botlar (sadece rakipler; eşin her zaman zor oynar) ----
+// =====================================================================
+// Kart saymaz, taktik bilmez. Kartların çoğunu rastgele atar; kalanında "alabiliyorsam
+// en büyük kartımla alayım" gibi saf bir mantıkla oynar. Zor botların koduna dokunmaz.
+// Eşlide sadece rakipler kolay (eşin hep zor); teklide üç bot da kolay ve sadece kendi elini düşünür.
+const isEasy = (seat) => state.difficulty === 'kolay' && (isSolo() ? seat !== 0 : seat % 2 === 1);
+function easyBid(seat) {
+  const minBid = Math.max(MIN_BID(), state.bid.high + 1);
+  if (minBid > MAX_BID()) return 0;
+  // elinin gücünü kabaca ve yanlış tahmin eder, skora hiç bakmaz
+  const est = bestTrump(state.hands[seat]).tricks + helpEst() + (Math.random() * 4 - 2);
+  return est >= minBid ? minBid : 0;
+}
+function easyTrump(seat) {   // en güçlü renk değil, en çok kartı olan renk
+  const h = state.hands[seat];
+  let best = 'S', n = -1;
+  for (const s of SUIT_ORDER) {
+    const k = h.filter(c => c.suit === s).length;
+    if (k > n || (k === n && Math.random() < 0.5)) { best = s; n = k; }
+  }
+  return best;
+}
+function easyChoose(legal, trick) {
+  if (Math.random() < 0.6) return legal[Math.floor(Math.random() * legal.length)];
+  const T = state.contract.trump;
+  const biggest = (cards) => cards.reduce((a, b) => cardValue(b, T) > cardValue(a, T) ? b : a);
+  if (!trick.length) return biggest(legal);                        // en büyük kartla açar
+  const cur = trick.find(t => t.seat === trickWinner(trick, T)).card;
+  const win = legal.filter(c => beats(c, cur, T));
+  if (win.length) return biggest(win);                             // alabiliyorsa en büyükle alır
+  return cheapest(legal, T);
+}
+
+function botChoose(seat) {
+  const hand = state.hands[seat], trick = state.play.trick, T = state.contract.trump;
+  const legal = legalMoves(hand, trick, T);
+  if (legal.length === 1) return legal[0];
+  if (isEasy(seat)) return easyChoose(legal, trick);
+  const B = brain(seat);
+  const card = trick.length ? chooseFollow(B, seat, legal, trick) : chooseLead(B, seat, legal);
+  const eq = sameJob(card, legal, trick);
+  return eq[Math.floor(Math.random() * eq.length)];
+}
+
+// ---- Yere kart varken ne atılır ----
+function chooseFollow(B, seat, legal, trick) {
+  const T = B.trump;
+  const curSeat = trickWinner(trick, T);
+  const cur = trick.find(t => t.seat === curSeat).card;
+  const winners = legal.filter(c => beats(c, cur, T));
+  const losers = legal.filter(c => !beats(c, cur, T));
+  const led = trick[0].card.suit;
+  const partner = partnerOf(seat);
+  const trumpOnTable = led !== T && trick.some(t => t.card.suit === T);
+
+  // Eşim benden sonra oynayacak ve bu rengin en büyüğü onda (açık el): eli zaten o alacak,
+  // üstelik yükseltmek zorunda. Benim büyük kartımı boşa harcama, en küçüğünü at.
+  if (!trick.some(t => t.seat === partner) && B.known(partner) && !trumpOnTable &&
+      state.hands[partner].some(c => c.suit === led && B.isMaster(c))) {
+    const between = (seat + 1) % 4;   // benimle eşim arasındaki rakip
+    const ruffed = led !== T && B.voidish(between, led) && B.holds(between, c => c.suit === T);
+    if (!ruffed) return losers.length ? discard(B, seat, losers) : cheapest(winners, T);
+  }
+
+  // Eşim eli tutuyor ve kimse geçemez: boşuna büyük kart harcama
+  if (teamOf(curSeat) === B.team && trickSafe(B, trick)) {
+    return losers.length ? discard(B, seat, losers) : cheapest(winners, T);
+  }
+
+  // Garanti ellerimiz yetmiyorsa risk al: rakibin büyük kartının yerini tahmin edip
+  // daha küçük kartla almayı dene (ör. yerde A–Q varken Q oyna)
+  const st = sideStatus(B);
+  if (st.need > st.sure && !trumpOnTable) {
+    const f = finesse(B, seat, winners, trick);
+    if (f) return f;
+  }
+
+  // Eli garanti alan en ucuz kart (son oyuncuysak, alan en küçük kart)
+  const safe = winners.filter(c => trickSafe(B, [...trick, { seat, card: c }]));
+  if (safe.length) return cheapest(safe, T);
+  if (!losers.length) return cheapest(winners, T);   // yükseltmek zorunlu: en ucuzuyla
+  return discard(B, seat, losers);                    // alamıyoruz: en değersiz kartı at
+}
+
+// Riskli oyun: üstte bizim bir kartımız varken araya giren tek kartın, eline oynamış
+// rakipte olduğunu umarak daha küçük kartla al. Tutarsa 2 el, tutmazsa yine 1 el.
+function finesse(B, seat, winners, trick) {
+  const led = trick[0].card.suit, T = B.trump;
+  const later = laterSeats([...trick, { seat }]);   // benden sonra oynayacaklar
+  const laterOpps = later.filter(p => teamOf(p) !== B.team);
+  const earlierOpps = trick.map(t => t.seat).filter(p => teamOf(p) !== B.team);
+  if (!laterOpps.length || !earlierOpps.length) return null;
+  if (led !== T && laterOpps.some(p => B.voidish(p, led) && B.holds(p, c => c.suit === T))) return null;
+  let ourTop = 0;
+  for (let r = 14; r >= 2; r--) if (B.oursHas(led + r)) { ourTop = r; break; }
+  const cands = winners.filter(c => c.suit === led && !B.isMaster(c)).sort((a, b) => a.rank - b.rank);
+  for (const c of cands) {
+    const missing = [];
+    for (let r = c.rank + 1; r <= 14; r++) {
+      const k = led + r;
+      if (!B.gone(k) && !B.oursHas(k)) missing.push(k);
+    }
+    if (missing.length !== 1 || ourTop <= Number(missing[0].slice(1))) continue;
+    // eksik kart, elini oynamış rakipte olabilir mi? Olamazsa umut yok.
+    if (earlierOpps.some(p => B.holds(p, x => keyOf(x) === missing[0]))) return c;
+  }
+  return null;
+}
+
+// Eli alamayacağımız zaman en değersiz kart (kaçılan kart). Rakibin kartını durduran,
+// ileride el alacak kartları ve eşimin tutmadığı rengi saklar.
+function discard(B, seat, cards) {
+  const T = B.trump, hand = state.hands[seat];
+  const partner = partnerOf(seat);
+  const opps = SEATS().filter(p => teamOf(p) !== B.team);
+  const allies = SEATS().filter(p => p !== seat && teamOf(p) === B.team);   // eşlide eşim
+  const K = state.play.know;
+  const haveTrump = hand.some(c => c.suit === T);
+  const oppHasTrump = opps.some(p => B.holds(p, c => c.suit === T));
+  const score = (c) => {
+    const X = c.suit;
+    let v = c.rank * 0.5;
+    if (X === T) v += 40;
+    const oppHigher = opps.some(p => B.holds(p, x => x.suit === X && x.rank > c.rank));
+    const oppLower = opps.some(p => B.holds(p, x => x.suit === X && x.rank < c.rank));
+    if (!oppHigher) {
+      if (oppLower) v += 25;                      // rakibin bu renkteki kartını durdurur
+      else if (!oppHasTrump) v += 15;             // rakipte bu renk ve koz yok: el alır
+    } else if (oppLower) {
+      // rakibin büyük kartları düşünce sıra bu karta gelebilir (uzunlukla koruma)
+      const higherCount = [...new Set(opps.flatMap(p =>
+        B.unknown.concat(B.known(p) ? state.hands[p] : [])
+          .filter(x => x.suit === X && x.rank > c.rank && B.holds(p, y => keyOf(y) === keyOf(x))).map(keyOf)))].length;
+      const myLen = hand.filter(x => x.suit === X).length;
+      if (myLen > higherCount) v += 6;
+    }
+    if (X !== T) {
+      // eşim (teklide yanımdaki savunmacılardan biri) bu renkten kaçtıysa ya da bu renkte
+      // boşsa, bu rengi ben tutmalıyım
+      const allyLetGo = allies.some(a => (B.known(a) ? !state.hands[a].some(x => x.suit === X) : !!K.void[a][X])
+        || (K.disc[a][X] || 0) > 0);
+      if (allyLetGo) v += 8;
+      // eşim bu rengin en büyüğünü tutuyorsa (açık el) ben bu renkten kaçabilirim
+      if (B.known(partner) && state.hands[partner].some(x => x.suit === X && B.isMaster(x))) v -= 5;
+      // tek kalan kartı atıp renk boşaltmak kozla kesme şansı verir
+      if (haveTrump && hand.filter(x => x.suit === X).length === 1) v -= 2;
+    }
+    return v;
+  };
+  return pickNear(cards, cards.map(score), VARY_DISCARD, false);
+}
+
+// ---- El açarken ne oynanır ----
+function chooseLead(B, seat, legal) {
+  const T = B.trump, hand = state.hands[seat];
+  const st = sideStatus(B);
+  const declarerSide = st.declarerSide;
+  const partner = partnerOf(seat);
+  const pKnown = partner >= 0 && B.known(partner);
+  const pHand = pKnown ? state.hands[partner] : [];
+  const opps = SEATS().filter(p => teamOf(p) !== B.team);   // eşlide sağım ve solum
+  const K = state.play.know;
+  const len = (s) => hand.filter(x => x.suit === s).length;
+  const pLen = (s) => pHand.filter(x => x.suit === s).length;
+  const pTrumps = pHand.filter(x => x.suit === T);
+  const defeatSure = !declarerSide && st.sure >= st.need;
+
+  // Koz sayımı: rakiplerde koz kaldı mı, bizde kaç tane var?
+  const oppHasTrump = opps.some(p => B.holds(p, c => c.suit === T));
+  const ourTrumps = len(T) + pTrumps.length;
+  const oppTrumpCount = B.unknown.filter(c => c.suit === T).length
+    + opps.filter(p => B.known(p)).reduce((n, p) => n + state.hands[p].filter(c => c.suit === T).length, 0);
+
+  // Eşimin açık elinde bu rengin en büyüğü / benden büyük kartı var mı?
+  const partnerMaster = (s) => pHand.some(x => x.suit === s && B.isMaster(x));
+  const partnerHigher = (c) => pHand.some(x => x.suit === c.suit && x.rank > c.rank);
+  // Kozla kesme planı: eşim bu renkte benden kısa ve kozu var; benim el alamayacak
+  // küçük kartlarımı eşim kozla alır. Eşimden sonra oynayan rakip daha büyük kozla kesemez olmalı.
+  const overruff = (s) => {
+    const opp2 = (seat + 3) % 4;
+    const pTop = Math.max(0, ...pTrumps.map(x => x.rank));
+    return B.voidish(opp2, s) && B.holds(opp2, x => x.suit === T && x.rank > pTop);
+  };
+  const ruffable = (s) => declarerSide && pKnown && s !== T && pTrumps.length > 0 &&
+    pLen(s) < len(s) && hand.some(x => x.suit === s && !B.isMaster(x)) && !overruff(s);
+  const ruffPlan = SUIT_ORDER.some(ruffable);
+
+  const scoreOf = (c) => {
+    const X = c.suit;
+    const myLowest = Math.min(...hand.filter(x => x.suit === X).map(x => x.rank));
+    // Eşimde daha büyük kart varken en küçük kartımı açmak, eşime aldırmaktır (doğru oyun);
+    // bu kartı "en büyük" sayma ki aşağıdaki "eşime aldır" puanını alsın.
+    const master = B.isMaster(c) && !(pKnown && partnerHigher(c) && c.rank === myLowest);
+    // Eşimin açık elinde bu renkte daha büyük kart var: büyük kartımı açarsam eşim üstüne
+    // çıkmak zorunda kalır, iki büyük kart tek ele gider (ör. K açıp A ile almak). Açma.
+    if (pKnown && master && partnerHigher(c)) return -20;
+
+    if (X === T) {
+      if (declarerSide && oppHasTrump) {
+        // rakibin kozlarını bitir: rakiplerin kozu ikiye bölünür, bizdeki koz sayısı
+        // bir rakibinkinden fazlaysa kozları çekmek mantıklı. Ama önce kozla kesme planı varsa
+        // eşimin kozlarını harcamayalım.
+        if (ourTrumps < Math.ceil(oppTrumpCount / 2)) return master ? 20 : -10;
+        const hi = ruffPlan ? 35 : 60, lo = ruffPlan ? 15 : 30;
+        if (master) return hi;
+        if (partnerMaster(T)) return hi - 2 - c.rank * 0.1;   // küçük kozla eşimin büyük kozuna
+        return lo - c.rank * 0.5;
+      }
+      if (!oppHasTrump) return master ? 8 : 2;   // kozlar zaten en büyük, acele yok
+      return master ? 15 : -15;                  // savunmada koz açmak genelde kötü
+    }
+
+    let s = 0;
+    // As–papaz: papaz benden sonra oynayacak açık rakipte ve yanında küçük kartı varsa
+    // ası açma; eşimin o rengi açmasını bekle ki papaz düşsün. Papaz tekse as açmak papazı düşürür.
+    if (c.rank === 14) for (const q of opps) if (state.open[q]) {
+      const qs = state.hands[q].filter(x => x.suit === X);
+      if (qs.some(x => x.rank === 13)) s += qs.length >= 2 ? -40 : 30;
+    }
+    const ruffRisk = opps.some(p => B.voidish(p, X) && B.holds(p, x => x.suit === T));
+    if (master) {
+      if (ruffRisk) return s - 30;
+      // Kozla kesme planının ilk adımı: eşimin bu renkte hâlâ (küçük) kartı var ve en büyük
+      // kart bende. Önce büyük kartı oyna ki eşimin kartı altına gitsin ve el bizim olsun;
+      // sonraki seferde eşim bu renkte boş kalır ve kozla keser. (Küçük kart açarsam
+      // eşimin tek kartı da mecburen gider ve eli rakip alır.)
+      if (ruffable(X) && pLen(X) > 0 && !partnerHigher(c)) return s + 65;
+      if (declarerSide) return s + 40;
+      // Savunma: rakibi batırmak kesinse alır kartları hemen çek. Değilse, rakipte bu renkten
+      // yakalanacak büyük kart (J, Q, K) varken bekle; eşim onu dürtünce üstüne atarız.
+      // Yakalanacak kart yoksa beklemenin faydası yok, çek.
+      if (defeatSure) return s + 50;
+      const catchable = opps.some(p => B.holds(p, x => x.suit === X && x.rank >= 11 && x.rank < c.rank));
+      return s + (catchable ? 4 : 45);
+    }
+    if (ruffRisk) s -= 35;   // rakip kozla keser
+
+    // Küçük kartla eşimin en büyük kartına aldır (eşim yükseltmek zorunda)
+    if (partnerMaster(X) && !ruffRisk) s += 38;
+
+    // Kozla kesme planı: alır kartları çekmeden önce yapılır (yoksa rakip o renkte boşalıp keser)
+    if (ruffable(X)) s += pLen(X) === 0 ? 55 : 42;
+
+    // Eşim (gizli; teklide yanımdaki bir savunmacı) bu renkte boş ve kozu var: ona kozla aldır
+    const allies = SEATS().filter(p => p !== seat && teamOf(p) === B.team && !B.known(p));
+    if (allies.some(a => K.void[a][X] && B.holds(a, x => x.suit === T)) && !ruffRisk) s += 35;
+
+    // Dürtme: hemen sonraki rakip açık eldeyse ve bu renkte yerdekini geçen kartları sadece
+    // büyük kartlarsa (J, Q, K, A), küçük kartla onları harcamaya zorla
+    const next = (seat + 1) % 4;
+    if (state.open[next] && teamOf(next) !== B.team) {
+      const higher = state.hands[next].filter(x => x.suit === X && x.rank > c.rank);
+      if (higher.length) {
+        const low = Math.min(...higher.map(x => x.rank));
+        if (low >= 11) s += 25 + (low - 11) * 3;
+      }
+    }
+
+    if (c.rank >= 11) s -= (c.rank - 10) * 4;            // en büyük olmayan büyük kart kaybolur
+    s += 8 - c.rank * 0.5 + len(X) * 0.8;               // uzun renkten küçük kart
+    return s;
+  };
+
+  return pickNear(legal, legal.map(scoreOf), VARY_LEAD, true);
+}
+
+// ---- Puanlama ve yazboz ----
+// tricks: [biz, onlar] bu elde alınan el sayıları
+//  - İhaleyi alan takım batarsa (aldığı < ihale): ihale kadar eksi. Karşı takım aldığı kadar artı.
+//  - 12 ya da 13 el alırsa: aldığı kadar artı, karşı takım ihale kadar eksi.
+//  - Normal tutturursa: aldığı kadar artı. Karşı takım aldığı kadar artı.
+function scoreHand(contract, tricks) {
+  const bt = teamOf(contract.seat), ot = 1 - bt;
+  const delta = [0, 0];
+  const taken = tricks[bt];
+  if (taken < contract.bid) {
+    delta[bt] = -contract.bid;
+    delta[ot] = tricks[ot];
+  } else if (taken >= 12) {
+    delta[bt] = taken;
+    delta[ot] = -contract.bid;
+  } else {
+    delta[bt] = taken;
+    delta[ot] = tricks[ot];
+  }
+  return delta;
+}
+
+// Tekli oyunda puanlama: tricks = her oyuncunun aldığı el sayısı [0..3]
+//  - İhaleyi alan: tutturursa aldığı kadar artı, batarsa ihale kadar eksi.
+//  - Diğerleri: aldıkları kadar artı. Hiç el alamayan, ihale kadar eksi.
+//  - 12-13 kuralı yok.
+// Gömmelide aynı kurallar; ama ihaleci dışındakiler en az 2 el almalı (0 ya da 1 el alan batar).
+function scoreHandSolo(contract, tricks) {
+  const minTricks = isGommeli() ? 2 : 1;
+  return tricks.map((t, s) => {
+    if (!SEATS().includes(s)) return 0;   // gömmelide boş koltuk
+    if (s === contract.seat) return t >= contract.bid ? t : -contract.bid;
+    return t >= minTricks ? t : -contract.bid;
+  });
+}
+
+// Kazanan: hedef puana ulaşan. Birden fazla ulaştıysa puanı yüksek olan; en yüksekte eşitlik
+// varsa oyun devam eder. Eşlide takım (0 biz, 1 onlar), teklide oturma numarası döner.
+function gameWinner() {
+  const sc = state.scores;
+  const max = Math.max(...sc);
+  if (max < TARGET) return null;
+  const leaders = sc.map((v, i) => v === max ? i : -1).filter(i => i >= 0);
+  return leaders.length === 1 ? leaders[0] : null;
+}
+
+function recordHand(contract, tricks) {
+  const delta = isSolo() ? scoreHandSolo(contract, tricks) : scoreHand(contract, tricks);
+  state.history.push({ contract: { ...contract }, tricks: [...tricks], delta });
+  state.scores = state.scores.map((v, i) => v + delta[i]);
+  updateScoreboard(true);
+  openYazboz();
+  return gameWinner();
+}
+
+function updateScoreboard(animate) {
+  const solo = isSolo();
+  document.querySelectorAll('header .team').forEach(el => { el.hidden = solo; });
+  $('soloScores').hidden = !solo;
+  const bump = (el) => { if (animate) { el.classList.remove('bump'); el.offsetWidth; el.classList.add('bump'); } };
+  if (solo) {
+    $('soloScores').innerHTML = SEATS().map(s =>
+      `<div class="pscore${s === 0 ? ' me' : ''}"><span>${AV[s]}</span><b>${state.scores[s] ?? 0}</b></div>`).join('');
+    if (animate) $('soloScores').querySelectorAll('b').forEach(bump);
+    return;
+  }
+  for (const t of [0, 1]) {
+    const el = $('score' + t);
+    el.textContent = state.scores[t];
+    bump(el);
+  }
+}
+
+function fmtDelta(d) {
+  return `<small class="${d < 0 ? 'neg' : ''}">${d > 0 ? '+' : ''}${d}</small>`;
+}
+
+function renderYazboz() {
+  const solo = isSolo();
+  // Sütunlar: eşlide iki takım (isimler alt alta), teklide dört oyuncu (avatar ve isim)
+  // (gömmelide üç oyuncu; her sütun hangi puan sırasına baktığını "i" ile bilir)
+  const cols = solo
+    ? SEATS().map(s => ({ head: `${AV[s]}<br>${displayName(s)}`, cls: 'pc', i: s }))
+    : [{ head: `${myName()}<br>${NAMES[2]}`, cls: 'us', i: 0 }, { head: `${NAMES[1]}<br>${NAMES[3]}`, cls: 'them', i: 1 }];
+  const table = $('yzRows').closest('table');
+  table.classList.toggle('solo', solo);
+  table.querySelector('thead').innerHTML =
+    `<tr><th></th><th>İhale</th>${cols.map(c => `<th class="${c.cls}">${c.head}</th>`).join('')}</tr>`;
+  const rows = $('yzRows');
+  if (!state.history.length) {
+    rows.innerHTML = `<tr><td colspan="${2 + cols.length}" class="empty">Henüz oynanan el yok</td></tr>`;
+  } else {
+    const run = cols.map(() => 0);
+    rows.innerHTML = state.history.map((h, i) => {
+      const c = h.contract;
+      const won = solo ? h.tricks[c.seat] : h.tricks[c.seat % 2];
+      const sym = `<span class="${RED[c.trump] ? 'red' : ''}">${SUIT_SYMBOL[c.trump]}</span>`;
+      const cells = cols.map((col, k) => {
+        run[k] += h.delta[col.i];
+        return `<td class="${col.cls}"><b class="${run[k] < 0 ? 'neg' : ''}">${run[k]}</b>${fmtDelta(h.delta[col.i])}</td>`;
+      }).join('');
+      return `<tr><td class="no">${i + 1}</td><td class="ih">${c.name || NAMES[c.seat]} ${c.bid}${sym} → ${won}</td>${cells}</tr>`;
+    }).join('');
+  }
+  table.querySelector('tfoot').innerHTML =
+    `<tr><td></td><td>Toplam</td>${cols.map(c => `<td class="${c.cls}">${state.scores[c.i]}</td>`).join('')}</tr>`;
+  const w = gameWinner();
+  $('yzResult').textContent = w === null ? '' : solo
+    ? (w === 0 ? '🏆 Kazandın!' : `🏆 ${displayName(w)} kazandı`)
+    : (w === 0 ? '🏆 Oyunu biz kazandık!' : 'Oyunu onlar kazandı');
+}
+
+function openYazboz() { renderYazboz(); $('yz').hidden = false; }
+
+// ---- Koz çubuğu ----
+// Sadece sen koza girdiğinde görünür. Koz renginin 13 kartı yukarıdan aşağı:
+//  soluk = senin ya da eşinin elinde, üstü çizili = oynandı, parlak = henüz çıkmadı (rakiplerde)
+function renderKozBar() {
+  const bar = $('kozbar');
+  const c = state.contract;
+  if (!c || c.seat !== 0 || !c.trump) { bar.hidden = true; $('table').classList.remove('koz'); return; }
+  const suit = c.trump;
+  // teklide eş yok; gömmelide gömdüğün kartlar da senin bildiğin (soluk) kartlar
+  const mine = isSolo() ? [...state.hands[0], ...(isGommeli() && state.buried ? state.buried : [])]
+                        : [...state.hands[0], ...state.hands[2]];
+  const ours = new Set(mine.filter(x => x.suit === suit).map(x => x.rank));
+  const played = state.played || new Set();
+  let html = `<div class="ks${RED[suit] ? ' red' : ''}">${SUIT_SYMBOL[suit]}</div>`;
+  for (let r = 14; r >= 2; r--) {
+    const cls = played.has(suit + r) ? 'played' : ours.has(r) ? 'mine' : 'out' + (RED[suit] ? ' red' : '');
+    html += `<div class="${cls}">${RANK_LABEL[r] || r}</div>`;
+  }
+  bar.innerHTML = html;
+  bar.hidden = false;
+  $('table').classList.add('koz');
+}
+
+// ---- Olaylar ----
+// ---- Ana menü ----
+function showMenu() {
+  // devam eden oyunu durdur ve masayı temizle
+  state.timers.forEach(clearTimeout); state.timers = [];
+  state.flights.forEach(({ anim, fly }) => { anim.cancel(); fly.remove(); }); state.flights = [];
+  state.dealing = false; state.phase = 'idle';
+  state.hands = [[], [], [], []];
+  resetRound();
+  for (let s = 0; s < 4; s++) renderSeat(s, false);
+  $('deck').style.display = 'none';
+  $('msg').textContent = '';
+  $('yz').hidden = true;
+  $('settings').hidden = true;
+  $('menu').hidden = false;
+  updateContinue();
+  replayMenuAnim();
+}
+
+// Oyunun kendi onay penceresi: cevap gelince true/false döner
+function ask(text, yesLabel = 'Evet') {
+  return new Promise(resolve => {
+    $('askText').textContent = text;
+    $('askYes').textContent = yesLabel;
+    $('askBox').hidden = false;
+    const done = (v) => { $('askBox').hidden = true; $('askYes').onclick = $('askNo').onclick = null; resolve(v); };
+    $('askYes').onclick = () => done(true);
+    $('askNo').onclick = () => done(false);
+  });
+}
+
+// ---- Oyun öncesi seçenekler (DENEME): hedef puan ve rakip bot zorluğu ----
+const preChoice = { target: '51', difficulty: 'zor' };
+try { Object.assign(preChoice, JSON.parse(localStorage.getItem('batak-oyunsecim') || '{}')); } catch (e) {}
+let preMode = 'esli';
+function renderPreGame() {
+  document.querySelectorAll('#preGame .seg').forEach(seg => {
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === preChoice[seg.dataset.pre]));
+  });
+}
+function openPreGame(mode) {
+  preMode = mode;
+  $('preTitle').textContent = document.querySelector(`.mode[data-mode="${mode}"] b`).textContent;
+  renderPreGame();
+  $('preGame').hidden = false;
+}
+document.querySelectorAll('#preGame .seg').forEach(seg => {
+  seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    preChoice[seg.dataset.pre] = b.dataset.v;
+    try { localStorage.setItem('batak-oyunsecim', JSON.stringify(preChoice)); } catch (e) {}
+    renderPreGame();
+  }));
+});
+$('preStart').addEventListener('click', () => { $('preGame').hidden = true; startGame(preMode); });
+$('preCancel').addEventListener('click', () => { $('preGame').hidden = true; });
+$('preGame').addEventListener('click', (e) => { if (e.target.id === 'preGame') $('preGame').hidden = true; });
+function applyTarget(t) {
+  TARGET = Number(t) || 51;
+  $('targetTxt').textContent = `Hedef: ${TARGET}`;
+}
+
+async function startGame(mode) {
+  if (loadGame() && !(await ask('Kayıtlı bir oyunun var. Silinip yeni oyun başlasın mı?', 'Yeni oyun'))) return;
+  initAudio();
+  applyTarget(preChoice.target);
+  state.difficulty = preChoice.difficulty;
+  state.mode = mode;
+  state.scores = isSolo() ? [0, 0, 0, 0] : [0, 0]; state.history = []; state.gameOver = false;
+  state.contract = null; state.play = null;
+  updateScoreboard(false);
+  pickNames();
+  updateNames();
+  $('yzClose').textContent = 'Kapat';
+  $('menu').hidden = true;
+  saveGame(state.dealer);
+  deal();
+}
+
+// ---- Kayıt ve "Devam Et" (DENEME) ----
+// Her el bitince puanlar, yazboz, isimler ve avatarlar telefona kaydedilir.
+// Devam edilince oyun bir sonraki elin başından sürer (yarıda kalan el yeniden dağıtılır).
+const SAVE_KEY = 'batak-kayit';
+function saveGame(nextDealer) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      mode: state.mode, scores: state.scores, history: state.history,
+      names: NAMES.slice(1), styles: BOT_STYLE.slice(1), avatars: AV.slice(1), dealer: nextDealer,
+      target: TARGET, difficulty: state.difficulty,
+    }));
+  } catch (e) {}
+}
+function loadGame() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; }
+}
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+function updateContinue() {
+  const s = loadGame();
+  $('continueBtn').hidden = !s;
+  if (s) {
+    const rakip = s.mode === 'gommeli' ? Math.max(s.scores[1], s.scores[3]) : Math.max(...s.scores.slice(1));
+    const skor = s.mode === 'esli' || !s.mode ? `Eşli · Biz ${s.scores[0]} – ${s.scores[1]} Onlar`
+      : `${s.mode === 'tekli' ? 'Tekli' : 'Gömmeli'} · Sen ${s.scores[0]} – en yüksek rakip ${rakip}`;
+    $('continueInfo').textContent = `${skor} · ${s.history.length + 1}. el · ` +
+      `${s.target || 51} puan · ${s.difficulty === 'kolay' ? 'kolay' : 'zor'}`;
+  }
+}
+function continueGame() {
+  const s = loadGame();
+  if (!s) return;
+  initAudio();
+  applyTarget(s.target || 51);
+  state.difficulty = s.difficulty || 'zor';
+  state.mode = s.mode;
+  state.scores = s.scores; state.history = s.history; state.gameOver = false;
+  s.names.forEach((n, i) => { NAMES[i + 1] = n; });
+  s.styles.forEach((v, i) => { BOT_STYLE[i + 1] = v; });
+  s.avatars.forEach((a, i) => { AV[i + 1] = a; });
+  updateScoreboard(false);
+  updateNames();
+  $('yzClose').textContent = 'Kapat';
+  $('menu').hidden = true;
+  state.dealer = s.dealer;
+  deal();
+}
+$('continueBtn').addEventListener('click', continueGame);
+
+// ---- Profil penceresi (DENEME) ----
+function renderProfileChip() {
+  $('chipAv').textContent = profile.avatar;
+  $('chipName').textContent = myName();
+}
+function openProfile(welcome) {
+  $('profTitle').textContent = welcome ? 'Hoş geldin! 👋' : 'Profil';
+  $('profWelcome').hidden = !welcome;
+  $('profName').value = profile.name || '';
+  $('profAvatars').innerHTML = AVATARS.map(a => `<button data-a="${a}" class="${a === profile.avatar ? 'on' : ''}">${a}</button>`).join('');
+  $('profAvatars').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    $('profAvatars').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  }));
+  $('profileSheet').hidden = false;
+}
+$('profileChip').addEventListener('click', () => openProfile(false));
+$('profSave').addEventListener('click', () => {
+  profile.name = $('profName').value.trim().slice(0, 12);
+  profile.avatar = $('profAvatars').querySelector('.on')?.dataset.a || profile.avatar;
+  try { localStorage.setItem('batak-profile', JSON.stringify(profile)); } catch (e) {}
+  AV[0] = profile.avatar;
+  // botlardan biri aynı avatarı taşıyorsa ona başka bir avatar ver
+  for (const s of [1, 2, 3]) if (AV[s] === AV[0]) AV[s] = AVATARS.find(a => !AV.includes(a));
+  renderProfileChip();
+  updateNames();
+  $('profileSheet').hidden = true;
+});
+$('profileSheet').addEventListener('click', (e) => { if (e.target.id === 'profileSheet') $('profileSheet').hidden = true; });
+
+// ---- Menü animasyonları (DENEME) ----
+function replayMenuAnim() {
+  const m = $('menu');
+  m.classList.remove('play'); m.offsetWidth; m.classList.add('play');
+}
+// Arka planda yavaşça süzülen kart simgeleri
+(() => {
+  const bg = $('menuBg');
+  const syms = ['♠', '♥', '♣', '♦'];
+  for (let i = 0; i < 16; i++) {
+    const s = document.createElement('span');
+    s.textContent = syms[i % 4];
+    s.style.left = (Math.random() * 100) + '%';
+    s.style.fontSize = (18 + Math.random() * 34) + 'px';
+    s.style.animationDuration = (14 + Math.random() * 16) + 's';
+    s.style.animationDelay = (-Math.random() * 30) + 's';
+    if (i % 4 === 1 || i % 4 === 3) s.style.color = 'rgba(255,120,120,.08)';
+    bg.appendChild(s);
+  }
+})();
+
+// Menüdeki yelpaze: gerçek oyun kartları
+[{ suit: 'S', rank: 14 }, { suit: 'H', rank: 13 }, { suit: 'C', rank: 12 }, { suit: 'D', rank: 11 }]
+  .forEach(c => $('menuFan').appendChild(cardEl(c, true)));
+
+document.querySelectorAll('.mode[data-mode]').forEach(b => b.addEventListener('click', () => openPreGame(b.dataset.mode)));
+// Menü düğmelerine dokununca hafif kart sesi
+document.querySelectorAll('#menu button').forEach(b => b.addEventListener('pointerdown', () => { initAudio(); playCardSound(); }));
+
+// ---- Ayarlar ----
+function openSettings() {
+  applySettings();
+  $('toMenu').hidden = !$('menu').hidden;   // menüdeyken "ana menüye dön" gerekmez
+  $('settings').hidden = false;
+}
+$('menuSettings').addEventListener('click', openSettings);
+$('gearBtn').addEventListener('click', openSettings);
+$('setClose').addEventListener('click', () => { $('settings').hidden = true; });
+$('settings').addEventListener('click', (e) => { if (e.target.id === 'settings') $('settings').hidden = true; });
+document.querySelectorAll('#settings .seg').forEach(seg => {
+  seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    settings[seg.dataset.key] = b.dataset.v;
+    saveSettings();
+    applySettings();
+    if (seg.dataset.key === 'sound' && state.sound) { initAudio(); playCardSound(); }
+  }));
+});
+$('toMenu').addEventListener('click', async () => {
+  $('settings').hidden = true;
+  if (await ask('Ana menüye dönülsün mü? Puanların kayıtlı, menüden "Devam Et" ile sürdürebilirsin. Yarıda kalan el yeniden dağıtılır.', 'Menüye dön')) showMenu();
+});
+$('table').addEventListener('pointerdown', skipDeal);
+$('me').addEventListener('pointerdown', skipDeal);
+$('yzBtn').addEventListener('click', openYazboz);
+$('yzClose').addEventListener('click', closeYazboz);
+window.addEventListener('resize', () => {
+  if (state.dealing) skipDeal();
+  else if (state.hands[0].length) {
+    renderMyHand(true, false);
+    for (let s = 1; s < 4; s++) if (state.open[s]) renderOpenSeat(s);
+    if (state.play) state.play.trick.forEach(({ seat, card }) => {
+      const el = $('trick').querySelector(`[data-key="${keyOf(card)}"]`);
+      if (el) { const p = slotPos(seat); el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; }
+    });
+  }
+});
+applySettings();
+pickNames();     // oyun açılınca isimler bir kez seçilir
+updateNames();
+renderProfileChip();
+updateContinue();
+// İlk açılışta (profil hiç kaydedilmemişse) adını ve avatarını sor
+try { if (!localStorage.getItem('batak-profile')) setTimeout(() => openProfile(true), 1200); } catch (e) {}
+
+// İnternetsiz oynama (sadece internette yayınlanınca çalışır; dosyaya çift tıklayınca gerek yok)
+if (false) {   // deneme sürümünde internetsiz oynama kapalı
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
