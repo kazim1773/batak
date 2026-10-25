@@ -1,6 +1,6 @@
 // İnternetsiz oynama: oyun dosyaları telefona kaydedilir.
 // Oyunu güncellediğinde SURUM'u bir artır ki telefonlar yeni sürümü alsın.
-const SURUM = 'batak-v5';
+const SURUM = 'batak-v6';
 const DOSYALAR = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon.png',

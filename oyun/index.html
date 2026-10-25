@@ -272,7 +272,10 @@
   .north .won { top: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
   .west .won  { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
   .east .won  { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
-  #me .won    { right: calc(50% + 40px); top: 6px; }
+  /* Benim el sayım isim etiketinin solunda durur; etiket uzasa da üstüne binmez, etiket ortada kalır */
+  .me-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; width: 100%; }
+  .me-row .name { grid-column: 2; }
+  #me .won    { position: static; grid-column: 1; grid-row: 1; justify-self: end; }
   #contract .red { color: #ff8a80; }
 
   /* Benim elim */
@@ -526,9 +529,8 @@
   </div>
 
   <div id="me" class="seat-me" style="position: relative;">
-    <div class="name" id="myname">Sen</div>
+    <div class="me-row"><div class="won"></div><div class="name" id="myname">Sen</div></div>
     <div class="bubble"></div>
-    <div class="won"></div>
     <div id="hand"></div>
   </div>
 
